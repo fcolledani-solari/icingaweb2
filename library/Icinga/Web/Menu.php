@@ -137,6 +137,11 @@ class Menu extends Navigation
         }
     }
 
+    /**
+     * Load user specific and shared dashboard homes from the db
+     *
+     * and append them as child items to the dashboard menu
+     */
     protected function loadDashboardHomeFromDatabase()
     {
         $dashboardHomes = $this->getDb()->select((new Select())
@@ -152,7 +157,7 @@ class Menu extends Navigation
             $this->getItem('dashboard')->addChild($this->createItem($dashboardHome->name, [
                 'label'       => t($dashboardHome->name),
                 'description' => $dashboardHome->name,
-                'url'         => 'home?name=' . $dashboardHome->name . '&id=' . $dashboardHome->id,
+                'url'         => 'dashboard/home?home=' . $dashboardHome->name . '&id=' . $dashboardHome->id,
                 'priority'    => $priority
             ]));
 
