@@ -62,5 +62,4 @@ class AvailableDashlets extends BaseHtmlElement
         $this->add($this->tableHeader());
         $this->add($this->tableBody());
     }
-
 }
