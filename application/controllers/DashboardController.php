@@ -142,7 +142,7 @@ class DashboardController extends ActionController
 
     public function renamePaneAction()
     {
-        $this->getTabs()->add( 'update-pane', [
+        $this->getTabs()->add('update-pane', [
             'title' => $this->translate('Update Pane'),
             'url'   => $this->getRequest()->getUrl()
         ])->activate('update-pane');

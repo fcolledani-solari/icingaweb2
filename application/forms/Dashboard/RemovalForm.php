@@ -33,7 +33,9 @@ class RemovalForm extends CompatForm
     {
         $formTitle = Html::sprintf(t('Please confirm removal of dashboard \'%s\''), $this->pane);
         if (Url::fromRequest()->getPath() === 'dashboard/remove-dashlet') {
-            $dashlet = $this->dashboard->getPane($this->pane)->getDashlet(Url::fromRequest()->getParam('dashlet'))->getName();
+            $dashlet = $this->dashboard->getPane($this->pane)->getDashlet(
+                Url::fromRequest()->getParam('dashlet')
+            )->getName();
             $formTitle = Html::sprintf(t('Please confirm removal of dashlet \'%s\''), $dashlet);
         }
         $this->add(Html::tag('h1', null, $formTitle));

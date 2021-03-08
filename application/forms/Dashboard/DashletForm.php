@@ -55,12 +55,16 @@ class DashletForm extends CompatForm
             if ($this->getPopulatedValue('home') === null && $this->getPopulatedValue('create_new_home') !== 'y') {
                 $homeItem = empty($this->navigation) ? null : reset($this->navigation);
                 if ($homeItem && Url::fromRequest()->getPath() !== 'dashboard/update-dashlet') {
-                    $this->panes = $this->dashboard->getPaneKeyNameArray($this->dashboard, $homeItem->getUrl()->getParam('homeId'));
+                    $this->panes = $this->dashboard->getPaneKeyNameArray(
+                        $this->dashboard,
+                        $homeItem->getUrl()->getParam('homeId')
+                    );
                 }
             } else {
                 if (array_key_exists($this->getPopulatedValue('home'), $this->navigation)) {
                     $this->panes = $this->dashboard->getPaneKeyNameArray(
-                        $this->dashboard, $this->navigation[$this->getPopulatedValue('home')]->getUrl()->getParam('homeId')
+                        $this->dashboard,
+                        $this->navigation[$this->getPopulatedValue('home')]->getUrl()->getParam('homeId')
                     );
                 }
             }
@@ -265,7 +269,7 @@ class DashletForm extends CompatForm
         $orgValue = (int)$this->getValue('org_parentId');
         if ($this->dashboard->getHomeByName($orgValue) === $this->getValue('home')) {
             $parentId = $orgValue;
-        } else if (array_key_exists($this->getValue('home'), $this->navigation)) {
+        } elseif (array_key_exists($this->getValue('home'), $this->navigation)) {
             $parentId = $this->navigation[$this->getValue('home')]->getUrl()->getParam('homeId');
         } else {
             $db->insert('dashboard_home', [
