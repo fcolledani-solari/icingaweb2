@@ -173,7 +173,9 @@ class DashletForm extends CompatForm
             [
                 'required'      => true,
                 'label'         => t('Url'),
-                'description'   => t('Enter url to be loaded in the dashlet. You can paste the full URL, including filters.'),
+                'description'   => t(
+                    'Enter url to be loaded in the dashlet. You can paste the full URL, including filters.'
+                ),
             ]
         );
 
