@@ -64,15 +64,20 @@ class Settings extends BaseHtmlElement
                     'title' => sprintf(t('Edit home %s'), $home->getName())
                 ]
             )), new HtmlElement('th', ['style' => 'background-color: #0095bf;'], [
-                new Link(new HtmlElement('i', [
-                    'aria-hidden'   => 'true',
-                    'class'         => 'icon-trash',
-                    'style'         => 'float: right; background-color: #0095bf;'
-                ]),
-                sprintf('dashboard/remove-home?home=%s', $home->getName()),
-                [
-                    'title' => sprintf(t('Remove home %s'), $home->getName()),
-                ])
+                new Link(
+                    new HtmlElement(
+                        'i',
+                        [
+                            'aria-hidden'   => 'true',
+                            'class'         => 'icon-trash',
+                            'style'         => 'float: right; background-color: #0095bf;'
+                        ]
+                    ),
+                    sprintf('dashboard/remove-home?home=%s', $home->getName()),
+                    [
+                        'title' => sprintf(t('Remove home %s'), $home->getName())
+                    ]
+                )
             ])
         ]);
         $tbody->add($tableRow);
