@@ -94,7 +94,7 @@ class Dashboard extends AbstractWidget
     public function load()
     {
         $navigation = new Navigation();
-        $navigation->load('dashboard-pane');
+        //$navigation->load('dashboard-pane');
 
         $panes = array();
         foreach ($navigation as $dashboardPane) {
@@ -110,26 +110,6 @@ class Dashboard extends AbstractWidget
         $this->mergePanes($panes);
         $this->loadUserDashboards($navigation);
         return $this;
-    }
-
-    /**
-     * Unset default panes provided by IW2 that doesn't
-     *
-     * provide parentId and paneId
-     *
-     * @return Dashboard
-     */
-    public function unloadDefaultPanes()
-    {
-        $dashboard = $this;
-        $dashboard->loadUserDashboardsFromDatabase();
-        foreach ($dashboard->getPanes() as $pane) {
-            if ($pane->getParentId() === null) {
-                unset($dashboard->panes[$pane->getName()]);
-            }
-        }
-
-        return $dashboard;
     }
 
     /**
@@ -154,7 +134,7 @@ class Dashboard extends AbstractWidget
     public function getHomeByName($id)
     {
         foreach ($this->dashboardHomeItems as $homeItem) {
-            if ((int)$homeItem->getUrl()->getParam('homeId') === $id) {
+            if ((int)$homeItem->getAttribute('homeId') === $id) {
                 return $homeItem->getUrl()->getParam('home');
             }
         }
@@ -194,6 +174,7 @@ class Dashboard extends AbstractWidget
         }
 
         $this->loadDashboardHomeItems();
+        $this->loadUserDashboardsFromDatabase();
     }
 
     /**
@@ -214,29 +195,24 @@ class Dashboard extends AbstractWidget
      * Load user specific dashboards and dashlets from the database
      * and merges them to the dashboards loaded from an ini file
      *
-     * @return bool
+     * @param   integer  $parentId
+     *
+     * @return  bool
      */
-    public function loadUserDashboardsFromDatabase()
+    public function loadUserDashboardsFromDatabase($parentId = 0)
     {
         $dashboards = array();
-        if (Url::fromRequest()->hasParam('home')) {
-            $parentId = Url::fromRequest()->getParam('homeId');
-
-            $select = $this->getDb()->select((new Select())
-                ->columns('*')
-                ->from('dashboard')
-                ->where(['home_id = ?' => $parentId]));
-        } else {
-            $select = $this->getDb()->select((new Select())
-                ->columns('*')
-                ->from('dashboard'));
+        if (Url::fromRequest()->hasParam('home') && $parentId === 0) {
+            $home = Url::fromRequest()->getParam('home');
+            $parentId = $this->dashboardHomeItems[$home]->getAttribute('homeId');
         }
 
+        $select = $this->getDb()->select((new Select())
+            ->columns('*')
+            ->from('dashboard')
+            ->where(['home_id = ?' => $parentId]));
+
         foreach ($select as $dashboard) {
-            // FIXME: If >= 2 dashboards with the same name exists in the DB, only the last pane will be visible,
-            //  since we are not going to use $homeId FILTER for the SQL query when all panes have to be listed in
-            //  the same time in dashboard/settings. So, until a suitable solution for this is found, it is
-            //  desirable DON'T to create panes with the same name.
             $dashboards[$dashboard->name] = new Pane($dashboard->name);
             $dashboards[$dashboard->name]->setUserWidget();
             $dashboards[$dashboard->name]->setPaneId($dashboard->id);
@@ -362,17 +338,21 @@ class Dashboard extends AbstractWidget
                 /** @var $current Pane */
                 $current = $this->panes[$pane->getName()];
 
-                /** @var $dashlet DashboardDashlet */
-                foreach ($pane->getDashlets() as $dashlet) {
-                    if ($current->hasDashlet($dashlet->getName()) === true) {
-                        $currentUrl = $current->getDashlet($dashlet->getName())->getUrl();
-                        if ($currentUrl->getAbsoluteUrl() === $dashlet->getUrl()->getAbsoluteUrl()) {
-                            $current->removeDashlet($dashlet->getName());
+                if ($current->getParentId() === $pane->getParentId()) {
+                    /** @var $dashlet DashboardDashlet */
+                    foreach ($pane->getDashlets() as $dashlet) {
+                        if ($current->hasDashlet($dashlet->getName()) === true) {
+                            $currentUrl = $current->getDashlet($dashlet->getName())->getUrl();
+                            if ($currentUrl->getAbsoluteUrl() === $dashlet->getUrl()->getAbsoluteUrl()) {
+                                $current->removeDashlet($dashlet->getName());
+                            }
                         }
                     }
-                }
 
-                $current->addDashlets($pane->getDashlets());
+                    $current->addDashlets($pane->getDashlets());
+                } else {
+                    $this->panes[$pane->getName()] = $pane;
+                }
             } else {
                 $this->panes[$pane->getName()] = $pane;
             }
@@ -398,11 +378,10 @@ class Dashboard extends AbstractWidget
                 if ($pane->getDisabled()) {
                     continue;
                 }
-                if (Url::fromRequest()->getPath() !== 'dashboard') {
+                if (Url::fromRequest()->hasParam('home')) {
                     if ($this->getHomeByName($pane->getParentId()) !== null) {
                         $url = Url::fromPath('dashboard/home')->addParams([
                             'home'   => $this->getHomeByName($pane->getParentId()),
-                            'homeId' => $pane->getParentId(),
                         ]);
                     } else {
                         $url = Url::fromPath('dashboard/home');
@@ -550,12 +529,10 @@ class Dashboard extends AbstractWidget
      *
      * @return array
      */
-    public function getPaneKeyNameArray(Dashboard $dashboard, $homeId)
+    public function getPaneKeyNameArray($homeId)
     {
-        //TODO: The Dashboard parameter is only temporary until we
-        //  have clarified how the defaultPanes should be stored.
         $lists = [];
-        foreach ($dashboard->getPanes() as $name => $pane) {
+        foreach ($this->getPanes() as $name => $pane) {
             if ($pane->getParentId() !== (int)$homeId) {
                 continue;
             }

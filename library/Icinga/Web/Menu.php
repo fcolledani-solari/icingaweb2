@@ -157,9 +157,10 @@ class Menu extends Navigation
             $this->getItem('dashboard')->addChild($this->createItem($dashboardHome->name, [
                 'label'         => t($dashboardHome->name),
                 'description'   => $dashboardHome->name,
-                'url'           => 'dashboard/home?home=' . $dashboardHome->name . '&homeId=' . $dashboardHome->id,
+                'url'           => 'dashboard/home?home=' . $dashboardHome->name,
                 'priority'      => $priority,
-                'owner'         => $dashboardHome->owner
+                'owner'         => $dashboardHome->owner,
+                'homeId'        => $dashboardHome->id
             ]));
 
             $priority += 10;

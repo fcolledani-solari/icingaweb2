@@ -64,7 +64,6 @@ class RenamePaneForm extends CompatForm
 
         $this->dashboard->getConn()->update('dashboard', [
             'name'  => $pane->getName(),
-            'title' => $pane->getTitle()
         ], ['dashboard.id=?' => $pane->getPaneId()]);
 
         Notification::success(
