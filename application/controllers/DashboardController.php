@@ -224,13 +224,18 @@ class DashboardController extends ActionController
             'url'       => $this->getRequest()->getUrl()
         ]);
 
-        $homes = $this->dashboard->getHomes();
-        $firstHome = reset($homes);
         $homeForm = (new RemovalForm($this->dashboard))
-            ->on(RemovalForm::ON_SUCCESS, function () use ($firstHome) {
-                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home'  => $firstHome->getName()
-                ]));
+            ->on(RemovalForm::ON_SUCCESS, function () {
+                $homes = $this->dashboard->getHomes();
+                $firstHome = reset($homes);
+
+                if ($firstHome->getName() === $this->getRequest()->getParam('home')) {
+                    $this->redirectNow('dashboard');
+                } else {
+                    $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
+                        'home'  => $firstHome->getName()
+                    ]));
+                }
             })
             ->handleRequest(ServerRequest::fromGlobals());
 
@@ -365,7 +370,10 @@ class DashboardController extends ActionController
      */
     private function createTabs($defaultPanes = false)
     {
-        $urlParam = ['home' => $this->params->get('home')];
+        $urlParam = [];
+        if ($this->params->has('home')) {
+            $urlParam = ['home' => $this->params->get('home')];
+        }
         $this->view->tabs = $this->dashboard->getTabs($defaultPanes)->extend(new DashboardSettings($urlParam));
     }
 }

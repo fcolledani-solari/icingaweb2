@@ -42,7 +42,7 @@ class DashletForm extends CompatForm
         $populated = $this->getPopulatedValue('home');
 
         if ($this->dashboard) {
-            if ($populated === null) {
+            if ($populated === null && ! empty($home)) {
                 $dashboardHomes[$home] = $home;
             }
 
