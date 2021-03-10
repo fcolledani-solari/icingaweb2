@@ -23,7 +23,7 @@ class RemovalForm extends CompatForm
      *
      * @param $pane
      */
-    public function __construct(Dashboard $dashboard, $pane)
+    public function __construct(Dashboard $dashboard, $pane = null)
     {
         $this->dashboard = $dashboard;
         $this->pane = $pane;
@@ -36,27 +36,51 @@ class RemovalForm extends CompatForm
             $dashlet = $this->dashboard->getPane($this->pane)->getDashlet(
                 Url::fromRequest()->getParam('dashlet')
             )->getName();
-            $formTitle = Html::sprintf(t('Please confirm removal of dashlet \'%s\''), $dashlet);
-        }
-        $this->add(Html::tag('h1', null, $formTitle));
 
+            $formTitle = Html::sprintf(t('Please confirm removal of dashlet \'%s\''), $dashlet);
+        } elseif (Url::fromRequest()->getPath() === 'dashboard/remove-home') {
+            $formTitle = Html::sprintf(
+                t('Please confirm removal of dashboard home \'%s\''),
+                Url::fromRequest()->getParam('home')
+            );
+        }
+
+        $this->add(Html::tag('h1', null, $formTitle));
         $this->addElement('submit', 'submit', [
             'label' => 'Confirm Removal'
         ]);
     }
 
-    public function removePaneAction()
+    public function removeHome()
+    {
+        $homes = $this->dashboard->getHomes();
+        $home = $homes[Url::fromRequest()->getParam('home')];
+
+        $db = $this->dashboard->getConn();
+
+        foreach ($this->dashboard->getPanes() as $pane) {
+            if ($pane->getParentId() === $home->getAttribute('homeId')) {
+                $db->delete('dashlet', ['dashboard_id = ?'    => $pane->getPaneId()]);
+                $db->delete('dashboard', ['home_id = ?'       => $home->getAttribute('homeId')]);
+            }
+        }
+
+        $db->delete('dashboard_home', ['id = ?' => $home->getAttribute('homeId')]);
+
+        Notification::success(t('Dashboard home has been removed') . ': ' . $home->getName());
+    }
+
+    public function removePane()
     {
         $pane = $this->dashboard->getPane($this->pane);
-        $this->dashboard->removePane($pane->getName());
 
         try {
             $db = $this->dashboard->getConn();
-            $db->delete('dashlet', ['dashboard_id=?' => $pane->getPaneId()]);
+            $db->delete('dashlet', ['dashboard_id = ?' => $pane->getPaneId()]);
             $db->delete('dashboard', [
-                'home_id=?' => $pane->getParentId(),
-                'id=?'      => $pane->getPaneId(),
-                'name=?'    => $this->pane
+                'home_id = ?' => $pane->getParentId(),
+                'id = ?'      => $pane->getPaneId(),
+                'name = ?'    => $this->pane
             ]);
 
             Notification::success(t('Dashboard has been removed') . ': ' . $pane->getTitle());
@@ -66,13 +90,14 @@ class RemovalForm extends CompatForm
         }
     }
 
-    public function removeDashletAction()
+    public function removeDashlet()
     {
         $dashlet = Url::fromRequest()->getParam('dashlet');
         $pane = $this->dashboard->getPane($this->pane);
         try {
-            $this->dashboard->getConn()->delete('dashlet', ['id=?' => $pane->getDashlet($dashlet)->getDashletId()]);
-            $pane->removeDashlet($dashlet);
+            $this->dashboard->getConn()->delete('dashlet', [
+                'id = ?' => $pane->getDashlet($dashlet)->getDashletId()
+            ]);
         } catch (\PDOException $err) {
             $this->addMessage($err);
             return;
@@ -84,9 +109,11 @@ class RemovalForm extends CompatForm
     public function onSuccess()
     {
         if (Url::fromRequest()->getPath() === 'dashboard/remove-pane') {
-            $this->removePaneAction();
+            $this->removePane();
+        } elseif (Url::fromRequest()->getPath() === 'dashboard/remove-home') {
+            $this->removeHome();
         } else {
-            $this->removeDashletAction();
+            $this->removeDashlet();
         }
     }
 }

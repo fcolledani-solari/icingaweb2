@@ -46,7 +46,7 @@ class DashletForm extends CompatForm
                 $dashboardHomes[$home] = $home;
             }
 
-            foreach ($this->dashboard->getDashboardHomeItems() as $name => $homeItem) {
+            foreach ($this->dashboard->getHomes() as $name => $homeItem) {
                 $this->navigation[$name] = $homeItem;
                 if (! array_key_exists($name, $dashboardHomes)) {
                     $dashboardHomes[$name] = $homeItem->getLabel();
@@ -54,7 +54,9 @@ class DashletForm extends CompatForm
             }
 
             if ($populated === null && $this->getPopulatedValue('create_new_home') !== 'y') {
-                $this->panes = $this->dashboard->getPaneKeyNameArray($this->navigation[$home]->getAttribute('homeId'));
+                if (Url::fromRequest()->hasParam('home')) {
+                    $this->panes = $this->dashboard->getPaneKeyNameArray($this->navigation[$home]->getAttribute('homeId'));
+                }
             } else {
                 if (array_key_exists($populated, $dashboardHomes)) {
                     $homeId = $this->navigation[$populated]->getAttribute('homeId');

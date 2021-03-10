@@ -58,7 +58,7 @@ class Dashboard extends AbstractWidget
      *
      * @var array
      */
-    private $dashboardHomeItems = [];
+    private $dashboardHomes = [];
 
     /**
      * @var User
@@ -117,9 +117,9 @@ class Dashboard extends AbstractWidget
      *
      * @return array
      */
-    public function getDashboardHomeItems()
+    public function getHomes()
     {
-        return $this->dashboardHomeItems;
+        return $this->dashboardHomes;
     }
 
     /**
@@ -129,17 +129,20 @@ class Dashboard extends AbstractWidget
      *
      * @param integer $id
      *
-     * @return string|null
+     * @throws ProgrammingError
      */
-    public function getHomeByName($id)
+    public function getHome($id)
     {
-        foreach ($this->dashboardHomeItems as $homeItem) {
-            if ((int)$homeItem->getAttribute('homeId') === $id) {
-                return $homeItem->getUrl()->getParam('home');
+        foreach ($this->dashboardHomes as $homeItem) {
+            if ($homeItem->getAttribute('homeId') === $id) {
+                return $homeItem;
             }
         }
 
-        return null;
+        throw new ProgrammingError(
+            'Dashboard home doesn\'t exist with the provided id: "%s"',
+            $id
+        );
     }
 
     /**
@@ -187,7 +190,7 @@ class Dashboard extends AbstractWidget
         $menu = new Menu();
         /** @var NavigationItem|mixed $child */
         foreach ($menu->getItem('dashboard')->getChildren() as $child) {
-            $this->dashboardHomeItems[$child->getName()] = $child;
+            $this->dashboardHomes[$child->getName()] = $child;
         }
     }
 
@@ -204,7 +207,7 @@ class Dashboard extends AbstractWidget
         $dashboards = array();
         if (Url::fromRequest()->hasParam('home') && $parentId === 0) {
             $home = Url::fromRequest()->getParam('home');
-            $parentId = $this->dashboardHomeItems[$home]->getAttribute('homeId');
+            $parentId = $this->dashboardHomes[$home]->getAttribute('homeId');
         }
 
         $select = $this->getDb()->select((new Select())
@@ -379,11 +382,11 @@ class Dashboard extends AbstractWidget
                     continue;
                 }
                 if (Url::fromRequest()->hasParam('home')) {
-                    if ($this->getHomeByName($pane->getParentId()) !== null) {
+                    try {
                         $url = Url::fromPath('dashboard/home')->addParams([
-                            'home'   => $this->getHomeByName($pane->getParentId()),
+                            'home'   => $this->getHome($pane->getParentId())->getName(),
                         ]);
-                    } else {
+                    } catch (ProgrammingError $e) {
                         $url = Url::fromPath('dashboard/home');
                     }
                 }

@@ -20,7 +20,7 @@ class SettingSortBox extends CompatForm
     {
         $active = Url::fromRequest()->getParam('home');
         $sortControls[$active] = $active;
-        foreach ($this->dashboard->getDashboardHomeItems() as $item) {
+        foreach ($this->dashboard->getHomes() as $item) {
             if ($active === $item->getName()) {
                 continue;
             }

@@ -8,7 +8,7 @@ use Icinga\Application\Icinga;
 use Icinga\Common\Database;
 use Icinga\Forms\Dashboard\AvailableDashlets;
 use Icinga\Forms\Dashboard\RemovalForm;
-use Icinga\Forms\Dashboard\RenamePaneForm;
+use Icinga\Forms\Dashboard\RenameForm;
 use Icinga\Web\Controller\ActionController;
 use Icinga\Exception\Http\HttpNotFoundException;
 use Icinga\Forms\Dashboard\DashletForm;
@@ -145,8 +145,8 @@ class DashboardController extends ActionController
             throw new HttpNotFoundException('Pane not found');
         }
 
-        $paneForm = (new RenamePaneForm($this->dashboard))
-            ->on(RenamePaneForm::ON_SUCCESS, function () {
+        $paneForm = (new RenameForm($this->dashboard))
+            ->on(RenameForm::ON_SUCCESS, function () {
                 $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
                     'home'  => $this->getRequest()->getParam('home')
                 ]));
@@ -182,10 +182,66 @@ class DashboardController extends ActionController
         $this->view->form = $paneForm;
     }
 
+    public function renameHomeAction()
+    {
+        if (! $this->params->get('home')) {
+            throw new Zend_Controller_Action_Exception(
+                'Missing parameter "home"',
+                400
+            );
+        }
+
+        $home = $this->params->get('home');
+        $this->getTabs()->add('rename-pane', [
+            'active'    => true,
+            'title'     => sprintf($this->translate('Rename Home: %s'), $home),
+            'url'       => $this->getRequest()->getUrl()
+        ]);
+
+        $homeForm = new RenameForm($this->dashboard);
+        $homeForm->on(RemovalForm::ON_SUCCESS, function () use ($home, $homeForm) {
+                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
+                    'home'  => $homeForm->getValue('name')
+                ]));
+            })
+            ->handleRequest(ServerRequest::fromGlobals());
+
+        $this->view->form = $homeForm;
+    }
+
+    public function removeHomeAction()
+    {
+        if (! $this->params->get('home')) {
+            throw new Zend_Controller_Action_Exception(
+                'Missing parameter "home"',
+                400
+            );
+        }
+
+        $home = $this->params->get('home');
+        $this->getTabs()->add('remove-pane', [
+            'active'    => true,
+            'title'     => sprintf($this->translate('Remove Home: %s'), $home),
+            'url'       => $this->getRequest()->getUrl()
+        ]);
+
+        $homes = $this->dashboard->getHomes();
+        $firstHome = reset($homes);
+        $homeForm = (new RemovalForm($this->dashboard))
+            ->on(RemovalForm::ON_SUCCESS, function () use ($firstHome) {
+                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
+                    'home'  => $firstHome->getName()
+                ]));
+            })
+            ->handleRequest(ServerRequest::fromGlobals());
+
+        $this->view->form = $homeForm;
+    }
+
     public function homeAction()
     {
         $dashboardHome = $this->params->getRequired('home');
-        $homeOwner = $this->dashboard->getDashboardHomeItems()[$dashboardHome]->getAttribute('owner');
+        $homeOwner = $this->dashboard->getHomes()[$dashboardHome]->getAttribute('owner');
         $this->urlParam = ['home' => $dashboardHome];
 
         if ($dashboardHome === 'Available Dashlets' || $homeOwner === null) {
