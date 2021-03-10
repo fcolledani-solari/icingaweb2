@@ -50,37 +50,48 @@ class Settings extends BaseHtmlElement
     public function tableBody()
     {
         $homes = $this->dashboard->getHomes();
-        $home = $homes[Url::fromRequest()->getParam('home')];
+        if (Url::fromRequest()->hasParam('home')) {
+            $home = $homes[Url::fromRequest()->getParam('home')];
+        } else {
+            $home = reset($homes);
+            if (! empty($home)) {
+                $this->dashboard->loadUserDashboardsFromDatabase($home->getAttribute('homeId'));
+            }
+        }
+
         $tbody = new HtmlElement('tbody', null);
 
-        $tableRow = new HtmlElement('tr', null, [
-            new HtmlElement('th', [
-                'colspan'   => '2',
-                'style'     => 'text-align: left; padding: 0.5em; background-color: #0095bf;'
-            ], new Link(
-                $home->getName(),
-                sprintf('dashboard/rename-home?home=%s', $home->getName()),
-                [
-                    'title' => sprintf(t('Edit home %s'), $home->getName())
-                ]
-            )), new HtmlElement('th', ['style' => 'background-color: #0095bf;'], [
-                new Link(
-                    new HtmlElement(
-                        'i',
-                        [
-                            'aria-hidden'   => 'true',
-                            'class'         => 'icon-trash',
-                            'style'         => 'float: right; background-color: #0095bf;'
-                        ]
-                    ),
-                    sprintf('dashboard/remove-home?home=%s', $home->getName()),
+        if (! empty($home)) {
+            $tableRow = new HtmlElement('tr', null, [
+                new HtmlElement('th', [
+                    'colspan'   => '2',
+                    'style'     => 'text-align: left; padding: 0.5em; background-color: #0095bf;'
+                ], new Link(
+                    $home->getName(),
+                    sprintf('dashboard/rename-home?home=%s', $home->getName()),
                     [
-                        'title' => sprintf(t('Remove home %s'), $home->getName())
+                        'title' => sprintf(t('Edit home %s'), $home->getName())
                     ]
-                )
-            ])
-        ]);
-        $tbody->add($tableRow);
+                )), new HtmlElement('th', ['style' => 'background-color: #0095bf;'], [
+                    new Link(
+                        new HtmlElement(
+                            'i',
+                            [
+                                'aria-hidden'   => 'true',
+                                'class'         => 'icon-trash',
+                                'style'         => 'float: right; background-color: #0095bf;'
+                            ]
+                        ),
+                        sprintf('dashboard/remove-home?home=%s', $home->getName()),
+                        [
+                            'title' => sprintf(t('Remove home %s'), $home->getName())
+                        ]
+                    )
+                ])
+            ]);
+
+            $tbody->add($tableRow);
+        }
 
         foreach ($this->dashboard->getPanes() as $pane) {
             if ($pane->getDisabled() || $pane->getParentId() !== $home->getAttribute('homeId')) {
