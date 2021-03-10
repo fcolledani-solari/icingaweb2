@@ -139,7 +139,8 @@ class Settings extends BaseHtmlElement
                                 'style'         => 'float: right',
                                 'title'         => sprintf(
                                     t('Remove dashlet %s from pane %s'),
-                                    $dashlet->getTitle(), $pane->getTitle()
+                                    $dashlet->getTitle(),
+                                    $pane->getTitle()
                                 )
                             ]),
                             sprintf(
