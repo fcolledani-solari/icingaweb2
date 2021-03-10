@@ -27,17 +27,17 @@ class SettingSortBox extends CompatForm
             $sortControls[$item->getName()] = $item->getName();
         }
 
-       $this->addElement(
-           'select',
-           'sort_dashboard_home',
-           [
-               'class'          => 'autosubmit',
-               'required'       => true,
-               'label'          => t('Dashboard Home'),
-               'multiOptions'   => $sortControls,
-               'description'    => t('Select a dashboard home you want to see the dashboards from.')
-           ]
-       );
+        $this->addElement(
+            'select',
+            'sort_dashboard_home',
+            [
+                'class'          => 'autosubmit',
+                'required'       => true,
+                'label'          => t('Dashboard Home'),
+                'multiOptions'   => $sortControls,
+                'description'    => t('Select a dashboard home you want to see the dashboards from.')
+            ]
+        );
     }
 
     public function onSuccess()

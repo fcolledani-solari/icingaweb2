@@ -146,7 +146,7 @@ class DashboardController extends ActionController
         }
 
         $paneForm = (new RenamePaneForm($this->dashboard))
-            ->on(RenamePaneForm::ON_SUCCESS, function (){
+            ->on(RenamePaneForm::ON_SUCCESS, function () {
                 $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
                     'home'  => $this->getRequest()->getParam('home')
                 ]));

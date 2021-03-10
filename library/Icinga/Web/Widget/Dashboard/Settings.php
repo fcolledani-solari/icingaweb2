@@ -98,10 +98,10 @@ class Settings extends BaseHtmlElement
 
                 if (empty($pane->getDashlets())) {
                     $tableRow->add(new HtmlElement(
-                            'tr',
-                            null,
-                            new HtmlElement('td', ['colspan' => '3'], t('No dashlets added to dashboard')))
-                    );
+                        'tr',
+                        null,
+                        new HtmlElement('td', ['colspan' => '3'], t('No dashlets added to dashboard'))
+                    ));
                 } else {
                     foreach ($pane->getDashlets() as $dashlet) {
                         if ($dashlet->getDisabled()) {
@@ -124,7 +124,9 @@ class Settings extends BaseHtmlElement
                             )
                         ));
                         $tr->add(new HtmlElement('td', [
-                            'style' => 'table-layout: fixed; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;'
+                            'style' => ('
+                                table-layout: fixed; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                            ')
                         ], new Link(
                             $dashlet->getUrl()->getRelativeUrl(),
                             $dashlet->getUrl()->getRelativeUrl(),
@@ -136,7 +138,8 @@ class Settings extends BaseHtmlElement
                                 'class'         => 'icon-trash',
                                 'style'         => 'float: right',
                                 'title'         => sprintf(
-                                    t('Remove dashlet %s from pane %s'), $dashlet->getTitle(), $pane->getTitle()
+                                    t('Remove dashlet %s from pane %s'),
+                                    $dashlet->getTitle(), $pane->getTitle()
                                 )
                             ]),
                             sprintf(
