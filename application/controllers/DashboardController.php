@@ -200,11 +200,10 @@ class DashboardController extends ActionController
 
         $homeForm = new RenameForm($this->dashboard);
         $homeForm->on(RemovalForm::ON_SUCCESS, function () use ($home, $homeForm) {
-                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home'  => $homeForm->getValue('name')
-                ]));
-            })
-            ->handleRequest(ServerRequest::fromGlobals());
+            $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
+                'home'  => $homeForm->getValue('name')
+            ]));
+        })->handleRequest(ServerRequest::fromGlobals());
 
         $this->view->form = $homeForm;
     }

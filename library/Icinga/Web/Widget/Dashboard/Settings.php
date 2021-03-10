@@ -69,12 +69,11 @@ class Settings extends BaseHtmlElement
                     'class'         => 'icon-trash',
                     'style'         => 'float: right; background-color: #0095bf;'
                 ]),
-                    sprintf('dashboard/remove-home?home=%s', $home->getName()),
-                    [
-                        'title' => sprintf(t('Remove home %s'), $home->getName()),
-                    ]
-                )]
-            )
+                sprintf('dashboard/remove-home?home=%s', $home->getName()),
+                [
+                    'title' => sprintf(t('Remove home %s'), $home->getName()),
+                ])
+            ])
         ]);
         $tbody->add($tableRow);
 

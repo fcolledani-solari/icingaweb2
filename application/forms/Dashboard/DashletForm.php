@@ -55,7 +55,9 @@ class DashletForm extends CompatForm
 
             if ($populated === null && $this->getPopulatedValue('create_new_home') !== 'y') {
                 if (Url::fromRequest()->hasParam('home')) {
-                    $this->panes = $this->dashboard->getPaneKeyNameArray($this->navigation[$home]->getAttribute('homeId'));
+                    $this->panes = $this->dashboard->getPaneKeyNameArray(
+                        $this->navigation[$home]->getAttribute('homeId')
+                    );
                 }
             } else {
                 if (array_key_exists($populated, $dashboardHomes)) {
