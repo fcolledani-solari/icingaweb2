@@ -123,13 +123,13 @@ class DashboardController extends ActionController
         $paneForm = (new RemovalForm($this->dashboard, $pane))
             ->on(RemovalForm::ON_SUCCESS, function () {
                 $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home'  => $this->getRequest()->getParam('home')
+                    'home'  => $this->_request->getParam('home')
                 ]));
             })
             ->handleRequest(ServerRequest::fromGlobals());
 
         $this->view->pane = $pane;
-        $this->view->dashlet = $this->dashboard->getPane($pane)->getDashlet($this->getRequest()->getParam('dashlet'));
+        $this->view->dashlet = $this->dashboard->getPane($pane)->getDashlet($this->_request->getParam('dashlet'));
         $this->view->form = $paneForm;
     }
 
@@ -148,7 +148,7 @@ class DashboardController extends ActionController
         $paneForm = (new RenameForm($this->dashboard))
             ->on(RenameForm::ON_SUCCESS, function () {
                 $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home'  => $this->getRequest()->getParam('home')
+                    'home'  => $this->_request->getParam('home')
                 ]));
             })
             ->handleRequest(ServerRequest::fromGlobals());
@@ -174,7 +174,7 @@ class DashboardController extends ActionController
         $paneForm = (new RemovalForm($this->dashboard, $pane))
             ->on(RemovalForm::ON_SUCCESS, function () {
                 $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home'  => $this->getRequest()->getParam('home')
+                    'home'  => $this->_request->getParam('home')
                 ]));
             })
             ->handleRequest(ServerRequest::fromGlobals());

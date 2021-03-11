@@ -94,7 +94,7 @@ class Dashboard extends AbstractWidget
     public function load()
     {
         $navigation = new Navigation();
-        //$navigation->load('dashboard-pane');
+        $navigation->load('dashboard-pane');
 
         $panes = array();
         foreach ($navigation as $dashboardPane) {
@@ -326,6 +326,18 @@ class Dashboard extends AbstractWidget
         return true;
     }
 
+    public function hasHomePane($parent, $pane)
+    {
+        $select = (new Select())
+            ->columns('*')
+            ->from('dashboard')
+            ->where(['home_id = ?'  => $parent, 'name = ?'  => $pane]);
+
+        $result = $this->getConn()->select($select)->fetch();
+
+        return $result;
+    }
+
     /**
      * Merge panes with existing panes
      *
@@ -335,6 +347,7 @@ class Dashboard extends AbstractWidget
      */
     public function mergePanes(array $panes)
     {
+        $homeCreated = false;
         /** @var $pane Pane  */
         foreach ($panes as $pane) {
             if ($this->hasPane($pane->getName()) === true) {
@@ -353,11 +366,65 @@ class Dashboard extends AbstractWidget
                     }
 
                     $current->addDashlets($pane->getDashlets());
-                } else {
+                } elseif($current->getParentId() === null && $pane->getParentId() !== null) {
+                    foreach ($current->getDashlets() as $dashlet) {
+                        $dashletUrl = str_replace('amp;', '', $dashlet->getUrl());
+                        if (! $pane->hasDashlet($dashlet->getTitle())) {
+                            $this->getConn()->insert('dashlet', [
+                                'dashboard_id'  => $pane->getPaneId(),
+                                'owner'         => $this->getUser()->getUsername(),
+                                'name'          => $dashlet->getName(),
+                                'url'           => $dashletUrl
+                            ]);
+
+                            $pane->addDashlet($dashlet);
+                        }
+                    }
+
+                    $this->removePane($current->getTitle());
+                    $this->getConfig()->saveIni();
                     $this->panes[$pane->getName()] = $pane;
                 }
             } else {
-                $this->panes[$pane->getName()] = $pane;
+                if ($pane->getParentId() === null) {
+                    $db = $this->getConn();
+                    $this->loadDashboardHomeItems();
+                    if (! $homeCreated && ! array_key_exists('Default Dashboards', $this->getHomes())) {
+                        $db->insert('dashboard_home', [
+                            'name'  => 'Default Dashboards',
+                            'owner' => $this->getUser()->getUsername()
+                        ]);
+
+                        $parent = $db->lastInsertId();
+                        $homeCreated = true;
+                    } else {
+                        $this->loadDashboardHomeItems();
+                        $parent = $this->dashboardHomes['Default Dashboards']->getAttribute('homeId');
+                    }
+
+                    if ($this->hasHomePane($parent, $pane->getName()) === false) {
+                        $db->insert('dashboard', [
+                            'home_id'   => $parent,
+                            'name'      => $pane->getName()
+                        ]);
+
+                        $paneId = $db->lastInsertId();
+
+                        foreach ($pane->getDashlets() as $dashlet) {
+                            $dashletUrl = str_replace('amp;', '', $dashlet->getUrl());
+                            $db->insert('dashlet', [
+                                'dashboard_id'  => $paneId,
+                                'owner'         => $this->getUser()->getUsername(),
+                                'name'          => $dashlet->getName(),
+                                'url'           => $dashletUrl
+                            ]);
+                        }
+
+                        $this->panes[$pane->getName()] = $pane;
+                    }
+                } else {
+                    $this->panes[$pane->getName()] = $pane;
+                }
             }
         }
 
