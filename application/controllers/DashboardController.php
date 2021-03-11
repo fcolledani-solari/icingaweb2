@@ -227,9 +227,12 @@ class DashboardController extends ActionController
         $homeForm = (new RemovalForm($this->dashboard))
             ->on(RemovalForm::ON_SUCCESS, function () {
                 $homes = $this->dashboard->getHomes();
-                $firstHome = reset($homes);
+                // Since the navigation menu is not loaded that fast, we need to unset
+                // the just deleted home from this array as well.
+                unset($homes[Url::fromRequest()->getParam('home')]);
 
-                if ($firstHome->getName() === $this->getRequest()->getParam('home')) {
+                $firstHome = reset($homes);
+                if (empty($firstHome)) {
                     $this->redirectNow('dashboard');
                 } else {
                     $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
