@@ -225,6 +225,7 @@ class DashboardController extends ActionController
         ]);
 
         $homeForm = (new RemovalForm($this->dashboard))
+            ->setAction((string)Url::fromRequest())
             ->on(RemovalForm::ON_SUCCESS, function () {
                 $homes = $this->dashboard->getHomes();
                 // Since the navigation menu is not loaded that fast, we need to unset

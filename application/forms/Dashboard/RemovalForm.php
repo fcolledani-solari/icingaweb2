@@ -47,7 +47,8 @@ class RemovalForm extends CompatForm
 
         $this->add(Html::tag('h1', null, $formTitle));
         $this->addElement('submit', 'submit', [
-            'label' => 'Confirm Removal'
+            'label'             => 'Confirm Removal',
+            'data-base-target'  => '_main'
         ]);
     }
 

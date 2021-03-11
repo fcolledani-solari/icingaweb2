@@ -366,7 +366,7 @@ class Dashboard extends AbstractWidget
                     }
 
                     $current->addDashlets($pane->getDashlets());
-                } elseif($current->getParentId() === null && $pane->getParentId() !== null) {
+                } elseif ($current->getParentId() === null && $pane->getParentId() !== null) {
                     foreach ($current->getDashlets() as $dashlet) {
                         $dashletUrl = str_replace('amp;', '', $dashlet->getUrl());
                         if (! $pane->hasDashlet($dashlet->getTitle())) {
@@ -380,11 +380,9 @@ class Dashboard extends AbstractWidget
                             $pane->addDashlet($dashlet);
                         }
                     }
-
-                    $this->removePane($current->getTitle());
-                    $this->getConfig()->saveIni();
-                    $this->panes[$pane->getName()] = $pane;
                 }
+
+                $this->panes[$pane->getName()] = $pane;
             } else {
                 if ($pane->getParentId() === null) {
                     $db = $this->getConn();

@@ -62,12 +62,12 @@ class DashletForm extends CompatForm
             } else {
                 if (array_key_exists($populated, $dashboardHomes)) {
                     $homeId = $this->navigation[$populated]->getAttribute('homeId');
+                    $this->dashboard->loadUserDashboardsFromDatabase($homeId);
+                    $this->panes = $this->dashboard->getPaneKeyNameArray($homeId);
+
                     if (Url::fromRequest()->getPath() === 'dashboard/update-dashlet') {
                         $this->pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
                     }
-
-                    $this->dashboard->loadUserDashboardsFromDatabase($homeId);
-                    $this->panes = $this->dashboard->getPaneKeyNameArray($homeId);
                 }
             }
         }
