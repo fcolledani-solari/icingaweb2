@@ -8,6 +8,7 @@ use Icinga\Web\Notification;
 use Icinga\Web\Widget\Dashboard;
 use Icinga\Web\Widget\Dashboard\Dashlet;
 use ipl\Html\Html;
+use ipl\Html\HtmlElement;
 use ipl\Web\Compat\CompatForm;
 use ipl\Web\Url;
 
@@ -33,6 +34,18 @@ class DashletForm extends CompatForm
     public function __construct($dashboard)
     {
         $this->setDashboard($dashboard);
+    }
+
+    /**
+     * @inheritdoc
+     *
+     * @return bool
+     */
+    public function hasBeenSubmitted()
+    {
+        return $this->hasBeenSent()
+            && ($this->getPopulatedValue('remove_dashlet')
+                || $this->getPopulatedValue('submit'));
     }
 
     protected function assemble()
@@ -187,7 +200,36 @@ class DashletForm extends CompatForm
                 'description'   => t('Enter a title for the dashlet.'),
             ]
         );
-        $this->addElement('submit', 'submit', ['label' => $submitLabel]);
+        $this->add(
+            new HtmlElement(
+                'div',
+                [
+                    'class' => 'control-group form-controls',
+                    'style' => 'position: relative;  margin-top: 2em;'
+                ],
+                [
+                    Url::fromRequest()->getPath() !== 'dashboard/update-dashlet'? '' :
+                    new HtmlElement(
+                        'input',
+                        [
+                            'class' => 'btn-primary',
+                            'type'  => 'submit',
+                            'name'  => 'remove_dashlet',
+                            'value' => t('Remove Dashlet')
+                        ]
+                    ),
+                    new HtmlElement(
+                        'input',
+                        [
+                            'class' => 'btn-primary',
+                            'type'  => 'submit',
+                            'name'  => 'submit',
+                            'value' => $submitLabel
+                        ]
+                    ),
+                ]
+            )
+        );
     }
 
     public function newAction()
@@ -295,12 +337,28 @@ class DashletForm extends CompatForm
         Notification::success(t('Dashlet updated'));
     }
 
+    public function removeDashlet()
+    {
+        $dashlet = Url::fromRequest()->getParam('dashlet');
+        $pane = $this->dashboard->getPane($this->getValue('pane'));
+
+        $this->dashboard->getConn()->delete('dashlet', [
+            'id = ?' => $pane->getDashlet($dashlet)->getDashletId()
+        ]);
+
+        Notification::success(t('Dashlet has been removed from') . ' ' . $pane->getTitle());
+    }
+
     public function onSuccess()
     {
         if (Url::fromRequest()->getPath() === 'dashboard/new-dashlet') {
             $this->newAction();
         } else {
-            $this->updateAction();
+            if ($this->getPopulatedValue('remove_dashlet')) {
+                $this->removeDashlet();
+            } else {
+                $this->updateAction();
+            }
         }
     }
 

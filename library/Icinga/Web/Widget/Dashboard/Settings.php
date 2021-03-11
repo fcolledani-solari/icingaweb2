@@ -62,33 +62,20 @@ class Settings extends BaseHtmlElement
         $tbody = new HtmlElement('tbody', null);
 
         if (! empty($home)) {
-            $tableRow = new HtmlElement('tr', null, [
+            $tableRow = new HtmlElement(
+                'tr',
+                null,
                 new HtmlElement('th', [
                     'colspan'   => '2',
                     'style'     => 'text-align: left; padding: 0.5em; background-color: #0095bf;'
                 ], new Link(
                     $home->getName(),
-                    sprintf('dashboard/rename-home?home=%s', $home->getName()),
+                    sprintf('dashboard/update-home?home=%s', $home->getName()),
                     [
                         'title' => sprintf(t('Edit home %s'), $home->getName())
                     ]
-                )), new HtmlElement('th', ['style' => 'background-color: #0095bf;'], [
-                    new Link(
-                        new HtmlElement(
-                            'i',
-                            [
-                                'aria-hidden'   => 'true',
-                                'class'         => 'icon-trash',
-                                'style'         => 'float: right; background-color: #0095bf;'
-                            ]
-                        ),
-                        sprintf('dashboard/remove-home?home=%s', $home->getName()),
-                        [
-                            'title' => sprintf(t('Remove home %s'), $home->getName())
-                        ]
-                    )
-                ])
-            ]);
+                ))
+            );
 
             $tbody->add($tableRow);
         }
@@ -107,7 +94,7 @@ class Settings extends BaseHtmlElement
                 $th->add(new Link(
                     $pane->getName(),
                     sprintf(
-                        'dashboard/rename-pane?home=%s&pane=%s',
+                        'dashboard/update-pane?home=%s&pane=%s',
                         $this->dashboard->getHome($pane->getParentId())->getName(),
                         $pane->getName()
                     ),
@@ -120,25 +107,6 @@ class Settings extends BaseHtmlElement
             }
 
             $tableRow->add($th);
-            $th = new HtmlElement('th', null);
-            $th->add(new Link(
-                new HtmlElement('i', [
-                    'aria-hidden'   => 'true',
-                    'class'         => 'icon-trash',
-                    'style'         => 'float: right'
-                ]),
-                sprintf(
-                    'dashboard/remove-pane?home=%s&pane=%s',
-                    $this->dashboard->getHome($pane->getParentId())->getName(),
-                    $pane->getName()
-                ),
-                [
-                    'title' => sprintf(t('Remove pane %s'), $pane->getName()),
-                ]
-            ));
-
-            $tableRow->add($th);
-
             if (empty($pane->getDashlets())) {
                 $tableRow->add(new HtmlElement(
                     'tr',
@@ -174,24 +142,6 @@ class Settings extends BaseHtmlElement
                         $dashlet->getUrl()->getRelativeUrl(),
                         $dashlet->getUrl()->getRelativeUrl(),
                         ['title' => sprintf(t('Show dashlet %s'), $dashlet->getTitle())]
-                    )));
-                    $tr->add(new HtmlElement('td', null, new Link(
-                        new HtmlElement('i', [
-                            'aria-hidden'   => 'true',
-                            'class'         => 'icon-trash',
-                            'style'         => 'float: right',
-                            'title'         => sprintf(
-                                t('Remove dashlet %s from pane %s'),
-                                $dashlet->getTitle(),
-                                $pane->getTitle()
-                            )
-                        ]),
-                        sprintf(
-                            'dashboard/remove-dashlet?home=%s&pane=%s&dashlet=%s',
-                            $this->dashboard->getHome($pane->getParentId())->getName(),
-                            $pane->getName(),
-                            $dashlet->getName()
-                        )
                     )));
 
                     $tableRow->add($tr);

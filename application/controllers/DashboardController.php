@@ -7,8 +7,7 @@ use GuzzleHttp\Psr7\ServerRequest;
 use Icinga\Application\Icinga;
 use Icinga\Common\Database;
 use Icinga\Forms\Dashboard\AvailableDashlets;
-use Icinga\Forms\Dashboard\RemovalForm;
-use Icinga\Forms\Dashboard\RenameForm;
+use Icinga\Forms\Dashboard\HomeAndPaneForm;
 use Icinga\Web\Controller\ActionController;
 use Icinga\Exception\Http\HttpNotFoundException;
 use Icinga\Forms\Dashboard\DashletForm;
@@ -89,8 +88,13 @@ class DashboardController extends ActionController
 
         $dashletForm = new DashletForm($this->dashboard);
         $dashletForm->on(DashletForm::ON_SUCCESS, function () use ($dashletForm) {
+            $redirectUrl = $dashletForm->getValue('home');
+            if ($dashletForm->getPopulatedValue('remove_dashlet')) {
+                $redirectUrl = $this->_request->getParam('home');
+            }
+
             $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                'home'  => $dashletForm->getValue('home')
+                'home'  => $redirectUrl
             ]));
         })->handleRequest(ServerRequest::fromGlobals());
 
@@ -98,42 +102,7 @@ class DashboardController extends ActionController
         $this->view->form = $dashletForm;
     }
 
-    public function removeDashletAction()
-    {
-        $this->getTabs()->add('remove-dashlet', array(
-            'active'    => true,
-            'label'     => $this->translate('Remove Dashlet'),
-            'url'       => Url::fromRequest()
-        ));
-
-        if (! $this->_request->getParam('pane')) {
-            throw new Zend_Controller_Action_Exception(
-                'Missing parameter "pane"',
-                400
-            );
-        }
-        if (! $this->_request->getParam('dashlet')) {
-            throw new Zend_Controller_Action_Exception(
-                'Missing parameter "dashlet"',
-                400
-            );
-        }
-
-        $pane = $this->_request->getParam('pane');
-        $paneForm = (new RemovalForm($this->dashboard, $pane))
-            ->on(RemovalForm::ON_SUCCESS, function () {
-                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home'  => $this->_request->getParam('home')
-                ]));
-            })
-            ->handleRequest(ServerRequest::fromGlobals());
-
-        $this->view->pane = $pane;
-        $this->view->dashlet = $this->dashboard->getPane($pane)->getDashlet($this->_request->getParam('dashlet'));
-        $this->view->form = $paneForm;
-    }
-
-    public function renamePaneAction()
+    public function updatePaneAction()
     {
         $this->getTabs()->add('update-pane', [
             'title' => $this->translate('Update Pane'),
@@ -145,103 +114,52 @@ class DashboardController extends ActionController
             throw new HttpNotFoundException('Pane not found');
         }
 
-        $paneForm = (new RenameForm($this->dashboard))
-            ->on(RenameForm::ON_SUCCESS, function () {
-                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home'  => $this->_request->getParam('home')
-                ]));
-            })
-            ->handleRequest(ServerRequest::fromGlobals());
-
-        $this->view->form = $paneForm;
-    }
-
-    public function removePaneAction()
-    {
-        if (! $this->_request->getParam('pane')) {
-            throw new Zend_Controller_Action_Exception(
-                'Missing parameter "pane"',
-                400
-            );
-        }
-        $pane = $this->_request->getParam('pane');
-        $this->getTabs()->add('remove-pane', [
-            'active'    => true,
-            'title'     => sprintf($this->translate('Remove Dashboard: %s'), $pane),
-            'url'       => Url::fromRequest()
-        ]);
-
-        $paneForm = (new RemovalForm($this->dashboard, $pane))
-            ->on(RemovalForm::ON_SUCCESS, function () {
-                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home'  => $this->_request->getParam('home')
-                ]));
-            })
-            ->handleRequest(ServerRequest::fromGlobals());
-
-        $this->view->form = $paneForm;
-    }
-
-    public function renameHomeAction()
-    {
-        if (! $this->_request->getParam('home')) {
-            throw new Zend_Controller_Action_Exception(
-                'Missing parameter "home"',
-                400
-            );
-        }
-
-        $home = $this->_request->getParam('home');
-        $this->getTabs()->add('rename-home', [
-            'active'    => true,
-            'title'     => sprintf($this->translate('Rename Home: %s'), $home),
-            'url'       => Url::fromRequest()
-        ]);
-
-        $homeForm = new RenameForm($this->dashboard);
-        $homeForm->on(RemovalForm::ON_SUCCESS, function () use ($home, $homeForm) {
-            $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                'home'  => $homeForm->getValue('name')
-            ]));
-        })->handleRequest(ServerRequest::fromGlobals());
-
-        $this->view->form = $homeForm;
-    }
-
-    public function removeHomeAction()
-    {
-        if (! $this->_request->getParam('home')) {
-            throw new Zend_Controller_Action_Exception(
-                'Missing parameter "home"',
-                400
-            );
-        }
-
-        $home = $this->_request->getParam('home');
-        $this->getTabs()->add('remove-home', [
-            'active'    => true,
-            'title'     => sprintf($this->translate('Remove Home: %s'), $home),
-            'url'       => Url::fromRequest()
-        ]);
-
-        $homeForm = (new RemovalForm($this->dashboard))
+        $paneForm = (new HomeAndPaneForm($this->dashboard))
             ->setAction((string)Url::fromRequest())
-            ->on(RemovalForm::ON_SUCCESS, function () {
-                $homes = $this->dashboard->getHomes();
-                // Since the navigation menu is not loaded that fast, we need to unset
-                // the just deleted home from this array as well.
-                unset($homes[Url::fromRequest()->getParam('home')]);
+            ->on(HomeAndPaneForm::ON_SUCCESS, function () {
+                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
+                    'home'  => $this->_request->getParam('home')
+                ]));
+            })
+            ->handleRequest(ServerRequest::fromGlobals());
 
-                $firstHome = reset($homes);
-                if (empty($firstHome)) {
-                    $this->redirectNow('dashboard');
+        $this->view->form = $paneForm;
+    }
+
+    public function updateHomeAction()
+    {
+        if (! $this->_request->getParam('home')) {
+            throw new Zend_Controller_Action_Exception(
+                'Missing parameter "home"',
+                400
+            );
+        }
+
+        $homeForm = new HomeAndPaneForm($this->dashboard);
+        $homeForm->setAction((string)Url::fromRequest())
+            ->on(HomeAndPaneForm::ON_SUCCESS, function () use ($homeForm) {
+                // Check which button has triggered the on SUCCESS event because each button
+                // has a different redirect url
+                if ($homeForm->getPopulatedValue('btn_remove')) {
+                    $homes = $this->dashboard->getHomes();
+                    // Since the navigation menu is not loaded that fast, we need to unset
+                    // the just deleted home from this array as well.
+                    unset($homes[$this->_request->getParam('home')]);
+
+                    $firstHome = reset($homes);
+                    if (empty($firstHome)) {
+                        $this->redirectNow('dashboard');
+                    } else {
+                        $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
+                            'home'  => $firstHome->getName()
+                        ]));
+                    }
                 } else {
                     $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                        'home'  => $firstHome->getName()
+                        'home'  => $homeForm->getValue('name')
                     ]));
                 }
-            })
-            ->handleRequest(ServerRequest::fromGlobals());
+            })->handleRequest(ServerRequest::fromGlobals());
 
         $this->view->form = $homeForm;
     }
