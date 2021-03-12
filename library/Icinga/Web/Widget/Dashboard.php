@@ -345,7 +345,6 @@ class Dashboard extends AbstractWidget
      */
     public function mergePanes(array $panes)
     {
-        $homeCreated = false;
         /** @var $pane Pane  */
         foreach ($panes as $pane) {
             if ($this->hasPane($pane->getName()) === true) {

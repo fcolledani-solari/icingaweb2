@@ -29,10 +29,7 @@ class HomeAndPaneForm extends CompatForm
             $this->populate(['name' => $home]);
         } else {
             $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
-            $this->populate([
-                'name'  => $pane->getName(),
-                'title' => $pane->getTitle()
-            ]);
+            $this->populate(['name'  => $pane->getName()]);
         }
     }
 
