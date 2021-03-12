@@ -167,10 +167,9 @@ class DashboardController extends ActionController
     public function homeAction()
     {
         $dashboardHome = $this->_request->getParam('home');
-        $homeOwner = $this->dashboard->getHomes()[$dashboardHome]->getAttribute('owner');
         $this->urlParam = ['home' => $dashboardHome];
 
-        if ($dashboardHome === 'Available Dashlets' || $homeOwner === null) {
+        if ($dashboardHome === 'Available Dashlets') {
             $this->view->tabeleView = true;
 
             $this->getTabs()->add($dashboardHome, [

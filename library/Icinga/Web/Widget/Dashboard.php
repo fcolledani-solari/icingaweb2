@@ -58,7 +58,7 @@ class Dashboard extends AbstractWidget
      *
      * @var array
      */
-    private $dashboardHomes = [];
+    private $homes = [];
 
     /**
      * @var User
@@ -119,7 +119,7 @@ class Dashboard extends AbstractWidget
      */
     public function getHomes()
     {
-        return $this->dashboardHomes;
+        return $this->homes;
     }
 
     /**
@@ -133,9 +133,9 @@ class Dashboard extends AbstractWidget
      */
     public function getHome($id)
     {
-        foreach ($this->dashboardHomes as $homeItem) {
-            if ($homeItem->getAttribute('homeId') === $id) {
-                return $homeItem;
+        foreach ($this->homes as $home) {
+            if ($home->getAttribute('homeId') === $id) {
+                return $home;
             }
         }
 
@@ -176,7 +176,7 @@ class Dashboard extends AbstractWidget
             $this->loadUserDashboardsFromFile($file, $navigation);
         }
 
-        $this->loadDashboardHomeItems();
+        $this->loadHomeItems();
         $this->loadUserDashboardsFromDatabase();
     }
 
@@ -185,12 +185,12 @@ class Dashboard extends AbstractWidget
      *
      * always be loaded when the $this->load() method is called
      */
-    public function loadDashboardHomeItems()
+    public function loadHomeItems()
     {
         $menu = new Menu();
         /** @var NavigationItem|mixed $child */
         foreach ($menu->getItem('dashboard')->getChildren() as $child) {
-            $this->dashboardHomes[$child->getName()] = $child;
+            $this->homes[$child->getName()] = $child;
         }
     }
 
@@ -207,7 +207,7 @@ class Dashboard extends AbstractWidget
         $dashboards = array();
         if (Url::fromRequest()->hasParam('home') && $parentId === 0) {
             $home = Url::fromRequest()->getParam('home');
-            $parentId = $this->dashboardHomes[$home]->getAttribute('homeId');
+            $parentId = $this->homes[$home]->getAttribute('homeId');
         }
 
         $select = $this->getDb()->select((new Select())
@@ -383,18 +383,24 @@ class Dashboard extends AbstractWidget
             } else {
                 if ($pane->getParentId() === null) {
                     $db = $this->getConn();
-                    $this->loadDashboardHomeItems();
-                    if (! array_key_exists('Default Dashboards', $this->dashboardHomes)) {
-                        continue;
+                    $this->loadHomeItems();
+                    if (! array_key_exists('Default Dashboards', $this->homes)) {
+                        $db->insert('dashboard_home', [
+                            'name'  => 'Default Dashboards',
+                            'owner' => null
+                        ]);
+
+                        $this->loadHomeItems();
+                        $parent = $db->lastInsertId();
                     }
 
-                    $parent = $this->dashboardHomes['Default Dashboards']->getAttribute('homeId');
+                    $parent = $this->homes['Default Dashboards']->getAttribute('homeId');
+
                     if ($this->hasHomePane($parent, $pane->getName()) === false) {
                         $db->insert('dashboard', [
                             'home_id'   => $parent,
                             'name'      => $pane->getName()
                         ]);
-
                         $paneId = $db->lastInsertId();
 
                         foreach ($pane->getDashlets() as $dashlet) {
@@ -578,8 +584,6 @@ class Dashboard extends AbstractWidget
 
     /**
      * Return an array with pane name=>title format used for comboboxes
-     *
-     * @param Dashboard $dashboard
      *
      * @param $homeId
      *

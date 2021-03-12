@@ -25,6 +25,8 @@ CREATE TABLE dashlet (
     CONSTRAINT fk_dashlet_dashboard FOREIGN KEY (dashboard_id) REFERENCES dashboard (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+INSERT INTO dashboard_home (id, name, owner) VALUES (default, 'Default Dashboards', 'icingaadmin');
+
 CREATE USER 'dashboard'@'%' IDENTIFIED BY 'dashboard';
 GRANT ALL PRIVILEGES ON dashboard.* TO 'dashboard'@'%' IDENTIFIED BY 'dashboard';
 
