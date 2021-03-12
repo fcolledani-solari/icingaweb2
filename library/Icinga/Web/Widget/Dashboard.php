@@ -383,6 +383,8 @@ class Dashboard extends AbstractWidget
             } else {
                 if ($pane->getParentId() === null) {
                     $db = $this->getConn();
+                    $parent = null;
+
                     $this->loadHomeItems();
                     if (! array_key_exists('Default Dashboards', $this->homes)) {
                         $db->insert('dashboard_home', [
@@ -390,11 +392,12 @@ class Dashboard extends AbstractWidget
                             'owner' => null
                         ]);
 
-                        $this->loadHomeItems();
                         $parent = $db->lastInsertId();
                     }
 
-                    $parent = $this->homes['Default Dashboards']->getAttribute('homeId');
+                    if (empty($parent)) {
+                        $parent = $this->homes['Default Dashboards']->getAttribute('homeId');
+                    }
 
                     if ($this->hasHomePane($parent, $pane->getName()) === false) {
                         $db->insert('dashboard', [
