@@ -55,32 +55,37 @@ class DashletForm extends CompatForm
         $populated = $this->getPopulatedValue('home');
 
         if ($this->dashboard) {
-            if ($populated === null && ! empty($home)) {
+            if (empty($populated) && ! empty($home)) {
                 $dashboardHomes[$home] = $home;
             }
 
             foreach ($this->dashboard->getHomes() as $name => $homeItem) {
                 $this->navigation[$name] = $homeItem;
                 if (! array_key_exists($name, $dashboardHomes)) {
-                    $dashboardHomes[$name] = $homeItem->getLabel();
+                    $dashboardHomes[$name] = $homeItem->getName();
                 }
             }
 
-            if ($populated === null && $this->getPopulatedValue('create_new_home') !== 'y') {
-                if (Url::fromRequest()->hasParam('home')) {
+            if (empty($populated) && $this->getPopulatedValue('create_new_home') !== 'y') {
+                if (! empty($home)) {
                     $this->panes = $this->dashboard->getPaneKeyNameArray(
                         $this->navigation[$home]->getAttribute('homeId')
                     );
+                } else {
+                    // This tab was opened from where the home parameter is not present
+                    $firstHome = reset($this->navigation);
+                    if (! empty($firstHome)) {
+                        // Load dashboards from the DB by the given home Id
+                        $this->dashboard->loadUserDashboardsFromDatabase($firstHome->getAttribute('homeId'));
+                        $this->panes = $this->dashboard->getPaneKeyNameArray($firstHome->getAttribute('homeId'));
+                    }
                 }
             } else {
                 if (array_key_exists($populated, $dashboardHomes)) {
                     $homeId = $this->navigation[$populated]->getAttribute('homeId');
+                    // We have to load dashboards each time the home Id changed
                     $this->dashboard->loadUserDashboardsFromDatabase($homeId);
                     $this->panes = $this->dashboard->getPaneKeyNameArray($homeId);
-
-                    if (Url::fromRequest()->getPath() === 'dashboard/update-dashlet') {
-                        $this->pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
-                    }
                 }
             }
         }

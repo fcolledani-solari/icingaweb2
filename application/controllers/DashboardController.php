@@ -230,6 +230,12 @@ class DashboardController extends ActionController
      */
     public function indexAction()
     {
+        $homes = $this->dashboard->getHomes();
+        if (array_key_exists('Default Dashboards', $homes)) {
+            $defaultHome = $homes[t('Default Dashboards')];
+            $this->dashboard->loadUserDashboardsFromDatabase($defaultHome->getAttribute('homeId'));
+        }
+
         $this->createTabs();
         if (! $this->dashboard->hasPanes()) {
             $this->view->title = 'Dashboard';

@@ -60,7 +60,7 @@ class HomeAndPaneForm extends CompatForm
         foreach ($this->dashboard->getHomes() as $name => $homeItem) {
             $this->navigation[$name] = $homeItem;
             if (! array_key_exists($name, $dashboardHomes)) {
-                $dashboardHomes[$name] = $homeItem->getLabel();
+                $dashboardHomes[$name] = $homeItem->getName();
             }
         }
 

@@ -329,13 +329,11 @@ class Dashboard extends AbstractWidget
     public function hasHomePane($parent, $pane)
     {
         $select = (new Select())
-            ->columns('*')
+            ->columns('name')
             ->from('dashboard')
             ->where(['home_id = ?'  => $parent, 'name = ?'  => $pane]);
 
-        $result = $this->getConn()->select($select)->fetch();
-
-        return $result;
+        return $this->getConn()->select($select)->fetch();
     }
 
     /**
@@ -368,13 +366,12 @@ class Dashboard extends AbstractWidget
                     $current->addDashlets($pane->getDashlets());
                 } elseif ($current->getParentId() === null && $pane->getParentId() !== null) {
                     foreach ($current->getDashlets() as $dashlet) {
-                        $dashletUrl = str_replace('amp;', '', $dashlet->getUrl());
                         if (! $pane->hasDashlet($dashlet->getTitle())) {
                             $this->getConn()->insert('dashlet', [
                                 'dashboard_id'  => $pane->getPaneId(),
                                 'owner'         => $this->getUser()->getUsername(),
                                 'name'          => $dashlet->getName(),
-                                'url'           => $dashletUrl
+                                'url'           => $dashlet->getUrl()->getRelativeUrl()
                             ]);
 
                             $pane->addDashlet($dashlet);
@@ -387,19 +384,11 @@ class Dashboard extends AbstractWidget
                 if ($pane->getParentId() === null) {
                     $db = $this->getConn();
                     $this->loadDashboardHomeItems();
-                    if (! $homeCreated && ! array_key_exists('Default Dashboards', $this->getHomes())) {
-                        $db->insert('dashboard_home', [
-                            'name'  => 'Default Dashboards',
-                            'owner' => $this->getUser()->getUsername()
-                        ]);
-
-                        $parent = $db->lastInsertId();
-                        $homeCreated = true;
-                    } else {
-                        $this->loadDashboardHomeItems();
-                        $parent = $this->dashboardHomes['Default Dashboards']->getAttribute('homeId');
+                    if (! array_key_exists('Default Dashboards', $this->dashboardHomes)) {
+                        continue;
                     }
 
+                    $parent = $this->dashboardHomes['Default Dashboards']->getAttribute('homeId');
                     if ($this->hasHomePane($parent, $pane->getName()) === false) {
                         $db->insert('dashboard', [
                             'home_id'   => $parent,
@@ -409,12 +398,11 @@ class Dashboard extends AbstractWidget
                         $paneId = $db->lastInsertId();
 
                         foreach ($pane->getDashlets() as $dashlet) {
-                            $dashletUrl = str_replace('amp;', '', $dashlet->getUrl());
                             $db->insert('dashlet', [
                                 'dashboard_id'  => $paneId,
                                 'owner'         => $this->getUser()->getUsername(),
                                 'name'          => $dashlet->getName(),
-                                'url'           => $dashletUrl
+                                'url'           => $dashlet->getUrl()->getRelativeUrl()
                             ]);
                         }
 
