@@ -216,6 +216,10 @@ class Dashboard extends AbstractWidget
             ->where(['home_id = ?' => $parentId]));
 
         foreach ($select as $dashboard) {
+            if ((bool)$dashboard->disabled) {
+                continue;
+            }
+
             $dashboards[$dashboard->name] = new Pane($dashboard->name);
             $dashboards[$dashboard->name]->setUserWidget();
             $dashboards[$dashboard->name]->setPaneId($dashboard->id);
@@ -227,6 +231,10 @@ class Dashboard extends AbstractWidget
                 ->where(['dashboard_id = ?' => $dashboard->id, 'dashlet.owner = ?' => $this->user->getUsername()]));
 
             foreach ($newResults as $dashletData) {
+                if ((bool)$dashletData->disabled) {
+                    continue;
+                }
+
                 $dashlet = new DashboardDashlet(
                     $dashletData->name,
                     $dashletData->url,

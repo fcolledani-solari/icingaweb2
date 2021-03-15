@@ -153,12 +153,18 @@ class HomeAndPaneForm extends CompatForm
         $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
         $db = $this->dashboard->getConn();
 
-        $db->delete('dashlet', ['dashboard_id = ?' => $pane->getPaneId()]);
-        $db->delete('dashboard', [
-            'home_id = ?' => $pane->getParentId(),
-            'id = ?'      => $pane->getPaneId(),
-            'name = ?'    => $pane->getName()
-        ]);
+        if (Url::fromRequest()->getParam('home')) {
+            $db->update('dashboard', [
+                'disabled'  => true
+            ], ['id = ?'    => $pane->getPaneId()]);
+        } else {
+            $db->delete('dashlet', ['dashboard_id = ?' => $pane->getPaneId()]);
+            $db->delete('dashboard', [
+                'home_id = ?' => $pane->getParentId(),
+                'id = ?'      => $pane->getPaneId(),
+                'name = ?'    => $pane->getName()
+            ]);
+        }
 
         Notification::success(t('Dashboard has been removed') . ': ' . $pane->getTitle());
     }
@@ -184,16 +190,20 @@ class HomeAndPaneForm extends CompatForm
 
         $db = $this->dashboard->getConn();
 
-        foreach ($this->dashboard->getPanes() as $pane) {
-            if ($pane->getParentId() === $home->getAttribute('homeId')) {
-                $db->delete('dashlet', ['dashboard_id = ?'    => $pane->getPaneId()]);
-                $db->delete('dashboard', ['home_id = ?'       => $home->getAttribute('homeId')]);
+        if ($home->getName() !== 'Default Dashboards') {
+            foreach ($this->dashboard->getPanes() as $pane) {
+                if ($pane->getParentId() === $home->getAttribute('homeId')) {
+                    $db->delete('dashlet', ['dashboard_id = ?'    => $pane->getPaneId()]);
+                    $db->delete('dashboard', ['home_id = ?'       => $home->getAttribute('homeId')]);
+                }
             }
+
+            $db->delete('dashboard_home', ['id = ?' => $home->getAttribute('homeId')]);
+
+            Notification::success(t('Dashboard home has been removed') . ': ' . $home->getName());
+        } else {
+            Notification::warning(t('"Default Dashboards" home can\'t be deleted.'));
         }
-
-        $db->delete('dashboard_home', ['id = ?' => $home->getAttribute('homeId')]);
-
-        Notification::success(t('Dashboard home has been removed') . ': ' . $home->getName());
     }
 
     public function onSuccess()

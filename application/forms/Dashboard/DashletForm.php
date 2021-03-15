@@ -213,7 +213,7 @@ class DashletForm extends CompatForm
                     'style' => 'position: relative;  margin-top: 2em;'
                 ],
                 [
-                    Url::fromRequest()->getPath() !== 'dashboard/update-dashlet'? '' :
+                    Url::fromRequest()->getPath() !== 'dashboard/update-dashlet' ? '' :
                     new HtmlElement(
                         'input',
                         [
@@ -347,9 +347,15 @@ class DashletForm extends CompatForm
         $dashlet = Url::fromRequest()->getParam('dashlet');
         $pane = $this->dashboard->getPane($this->getValue('pane'));
 
-        $this->dashboard->getConn()->delete('dashlet', [
-            'id = ?' => $pane->getDashlet($dashlet)->getDashletId()
-        ]);
+        if (Url::fromRequest()->getParam('home') === 'Default Dashboards') {
+            $this->dashboard->getConn()->update('dashlet', [
+                'disabled'  => true
+            ], ['id = ?' => $pane->getDashlet($dashlet)->getDashletId()]);
+        } else {
+            $this->dashboard->getConn()->delete('dashlet', [
+                'id = ?' => $pane->getDashlet($dashlet)->getDashletId()
+            ]);
+        }
 
         Notification::success(t('Dashlet has been removed from') . ' ' . $pane->getTitle());
     }
