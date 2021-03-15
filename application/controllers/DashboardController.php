@@ -5,7 +5,6 @@ namespace Icinga\Controllers;
 
 use GuzzleHttp\Psr7\ServerRequest;
 use Icinga\Application\Icinga;
-use Icinga\Common\Database;
 use Icinga\Forms\Dashboard\AvailableDashlets;
 use Icinga\Forms\Dashboard\HomeAndPaneForm;
 use Icinga\Web\Controller\ActionController;
@@ -23,8 +22,6 @@ use ipl\Web\Url;
  */
 class DashboardController extends ActionController
 {
-    use Database;
-
     /**
      * @var Dashboard;
      */

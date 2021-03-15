@@ -153,7 +153,7 @@ class HomeAndPaneForm extends CompatForm
         $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
         $db = $this->dashboard->getConn();
 
-        if (Url::fromRequest()->getParam('home')) {
+        if (Url::fromRequest()->getParam('home') === 'Default Dashboards') {
             $db->update('dashboard', [
                 'disabled'  => true
             ], ['id = ?'    => $pane->getPaneId()]);
