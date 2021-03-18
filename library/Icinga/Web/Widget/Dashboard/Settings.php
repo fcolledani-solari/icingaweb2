@@ -70,7 +70,7 @@ class Settings extends BaseHtmlElement
                     'style'     => 'text-align: left; padding: 0.5em; background-color: #0095bf;'
                 ], new Link(
                     $home->getName(),
-                    sprintf('dashboard/update-home?home=%s', $home->getName()),
+                    sprintf('dashboard/rename-home?home=%s', $home->getName()),
                     [
                         'title' => sprintf(t('Edit home %s'), $home->getName())
                     ]
@@ -94,7 +94,7 @@ class Settings extends BaseHtmlElement
                 $th->add(new Link(
                     $pane->getName(),
                     sprintf(
-                        'dashboard/update-pane?home=%s&pane=%s',
+                        'dashboard/rename-pane?home=%s&pane=%s',
                         $this->dashboard->getHome($pane->getParentId())->getName(),
                         $pane->getName()
                     ),

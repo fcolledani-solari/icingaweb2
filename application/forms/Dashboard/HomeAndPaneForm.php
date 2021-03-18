@@ -24,10 +24,11 @@ class HomeAndPaneForm extends CompatForm
     {
         $this->dashboard = $dashboard;
 
-        if (Url::fromRequest()->getPath() === 'dashboard/update-home') {
+        $requestPath = Url::fromRequest()->getPath();
+        if ($requestPath === 'dashboard/rename-home') {
             $home = Url::fromRequest()->getParam('home');
             $this->populate(['name' => $home]);
-        } else {
+        } elseif ($requestPath === 'dashboard/rename-pane') {
             $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
             $this->populate(['name'  => $pane->getName()]);
         }
@@ -64,11 +65,13 @@ class HomeAndPaneForm extends CompatForm
         $description    = t('Edit the current home name');
         $btnUpdateLabel = t('Update Home');
         $btnRemoveLabel = t('Remove Home');
+        $formaction     = (string)Url::fromRequest()->setPath('dashboard/remove-home');
 
-        if (Url::fromRequest()->getPath() === 'dashboard/update-pane') {
+        if (Url::fromRequest()->getPath() === 'dashboard/rename-pane') {
             $description    = t('Edit the current pane name');
             $btnUpdateLabel = t('Update Pane');
             $btnRemoveLabel = t('Remove Pane');
+            $formaction     = (string)Url::fromRequest()->setPath('dashboard/remove-pane');
 
             $this->addElement(
                 'select',
@@ -108,7 +111,8 @@ class HomeAndPaneForm extends CompatForm
                             'type'              => 'submit',
                             'name'              => 'btn_remove',
                             'data-base-target'  => '_main',
-                            'value'             => $btnRemoveLabel
+                            'value'             => $btnRemoveLabel,
+                            'formaction'        => $formaction
                         ]
                     ),
                     new HtmlElement(
@@ -153,7 +157,7 @@ class HomeAndPaneForm extends CompatForm
         $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
         $db = $this->dashboard->getConn();
 
-        if (Url::fromRequest()->getParam('home') === 'Default Dashboards') {
+        if (Url::fromRequest()->getParam('home') === Dashboard::defaultHome) {
             $db->update('dashboard', [
                 'disabled'  => true
             ], ['id = ?'    => $pane->getPaneId()]);
@@ -190,7 +194,7 @@ class HomeAndPaneForm extends CompatForm
 
         $db = $this->dashboard->getConn();
 
-        if ($home->getName() !== 'Default Dashboards') {
+        if ($home->getName() !== Dashboard::defaultHome) {
             foreach ($this->dashboard->getPanes() as $pane) {
                 if ($pane->getParentId() === $home->getAttribute('homeId')) {
                     $db->delete('dashlet', ['dashboard_id = ?'    => $pane->getPaneId()]);
@@ -202,13 +206,14 @@ class HomeAndPaneForm extends CompatForm
 
             Notification::success(t('Dashboard home has been removed') . ': ' . $home->getName());
         } else {
-            Notification::warning(t('"Default Dashboards" home can\'t be deleted.'));
+            Notification::warning(sprintf(t('%s home can\'t be deleted.'), Dashboard::defaultHome));
         }
     }
 
     public function onSuccess()
     {
-        if (Url::fromRequest()->getPath() === 'dashboard/update-pane') {
+        $requestPath = Url::fromRequest()->getPath();
+        if ($requestPath === 'dashboard/rename-pane' || $requestPath === 'dashboard/remove-pane') {
             if ($this->getPopulatedValue('btn_update')) {
                 $this->renamePane();
             } else {

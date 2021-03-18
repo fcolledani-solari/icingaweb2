@@ -93,7 +93,7 @@ class DashletForm extends CompatForm
         $submitLabel = t('Add To Dashboard');
         $formTitle = t('Add Dashlet To Dashboard');
 
-        if (Url::fromRequest()->getPath() === 'dashboard/update-dashlet') {
+        if (Url::fromRequest()->getPath() === 'dashboard/rename-dashlet') {
             $submitLabel = t('Update Dashlet');
             $formTitle = t('Edit Dashlet');
         }
@@ -217,10 +217,11 @@ class DashletForm extends CompatForm
                     new HtmlElement(
                         'input',
                         [
-                            'class' => 'btn-primary',
-                            'type'  => 'submit',
-                            'name'  => 'remove_dashlet',
-                            'value' => t('Remove Dashlet')
+                            'class'         => 'btn-primary',
+                            'type'          => 'submit',
+                            'name'          => 'remove_dashlet',
+                            'value'         => t('Remove Dashlet'),
+                            'formaction'    => (string)Url::fromRequest()->setPath('dashboard/remove-dashlet')
                         ]
                     ),
                     new HtmlElement(
@@ -237,7 +238,7 @@ class DashletForm extends CompatForm
         );
     }
 
-    public function newAction()
+    public function createDashlet()
     {
         $db = $this->dashboard->getConn();
         if (! array_key_exists($this->getValue('home'), $this->navigation)) {
@@ -279,7 +280,7 @@ class DashletForm extends CompatForm
         Notification::success(t('Dashlet created'));
     }
 
-    public function updateAction()
+    public function updateDashlet()
     {
         $db = $this->dashboard->getConn();
         $orgParent = (int)$this->getValue('org_parentId');
@@ -363,12 +364,12 @@ class DashletForm extends CompatForm
     public function onSuccess()
     {
         if (Url::fromRequest()->getPath() === 'dashboard/new-dashlet') {
-            $this->newAction();
+            $this->createDashlet();
         } else {
             if ($this->getPopulatedValue('remove_dashlet')) {
                 $this->removeDashlet();
             } else {
-                $this->updateAction();
+                $this->updateDashlet();
             }
         }
     }
