@@ -89,6 +89,11 @@
                 $target = this.getLinkTargetFor($form);
             }
 
+            if ($('input[type=submit]', $form).hasAttr('formaction')) {
+                // Overwrite the URL of the form action with the one specified in formaction attr
+                url = $('input[type=submit]', $form).attr('formaction');
+            }
+
             if (! url) {
                 // Use the URL of the target container if the form's action is not set
                 url = $target.closest('.container').data('icinga-url');
