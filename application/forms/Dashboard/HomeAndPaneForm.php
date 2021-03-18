@@ -157,7 +157,7 @@ class HomeAndPaneForm extends CompatForm
         $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
         $db = $this->dashboard->getConn();
 
-        if (Url::fromRequest()->getParam('home') === Dashboard::defaultHome) {
+        if (Url::fromRequest()->getParam('home') === Dashboard::DEFAULT_HOME) {
             $db->update('dashboard', [
                 'disabled'  => true
             ], ['id = ?'    => $pane->getPaneId()]);
@@ -194,7 +194,7 @@ class HomeAndPaneForm extends CompatForm
 
         $db = $this->dashboard->getConn();
 
-        if ($home->getName() !== Dashboard::defaultHome) {
+        if ($home->getName() !== Dashboard::DEFAULT_HOME) {
             foreach ($this->dashboard->getPanes() as $pane) {
                 if ($pane->getParentId() === $home->getAttribute('homeId')) {
                     $db->delete('dashlet', ['dashboard_id = ?'    => $pane->getPaneId()]);
@@ -206,7 +206,7 @@ class HomeAndPaneForm extends CompatForm
 
             Notification::success(t('Dashboard home has been removed') . ': ' . $home->getName());
         } else {
-            Notification::warning(sprintf(t('%s home can\'t be deleted.'), Dashboard::defaultHome));
+            Notification::warning(sprintf(t('%s home can\'t be deleted.'), Dashboard::DEFAULT_HOME));
         }
     }
 

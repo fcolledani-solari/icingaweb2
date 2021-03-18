@@ -33,7 +33,7 @@ class Dashboard extends AbstractWidget
     use Database;
 
     /** @var string Name of the default home */
-    const defaultHome = 'Default Home';
+    const DEFAULT_HOME = 'Default Home';
 
     /**
      * An array containing all panes of this dashboard
@@ -384,9 +384,9 @@ class Dashboard extends AbstractWidget
                     $parent = null;
 
                     $this->loadHomeItems();
-                    if (! array_key_exists(self::defaultHome, $this->homes)) {
+                    if (! array_key_exists(self::DEFAULT_HOME, $this->homes)) {
                         $db->insert('dashboard_home', [
-                            'name'  => self::defaultHome,
+                            'name'  => self::DEFAULT_HOME,
                             'owner' => null
                         ]);
 
@@ -394,7 +394,7 @@ class Dashboard extends AbstractWidget
                     }
 
                     if (empty($parent)) {
-                        $parent = $this->homes[self::defaultHome]->getAttribute('homeId');
+                        $parent = $this->homes[self::DEFAULT_HOME]->getAttribute('homeId');
                     }
 
                     if ($this->hasHomePane($parent, $pane->getName()) === false) {

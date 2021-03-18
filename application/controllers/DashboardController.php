@@ -292,8 +292,8 @@ class DashboardController extends ActionController
     public function indexAction()
     {
         $homes = $this->dashboard->getHomes();
-        if (array_key_exists(Dashboard::defaultHome, $homes)) {
-            $defaultHome = $homes[Dashboard::defaultHome];
+        if (array_key_exists(Dashboard::DEFAULT_HOME, $homes)) {
+            $defaultHome = $homes[Dashboard::DEFAULT_HOME];
             $this->dashboard->loadUserDashboardsFromDatabase($defaultHome->getAttribute('homeId'));
         }
 
