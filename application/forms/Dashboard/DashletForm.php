@@ -334,7 +334,8 @@ class DashletForm extends CompatForm
             $dashlet = $pane->getDashlet($this->getValue('org_dashlet'));
             $dashlet->setTitle($this->getValue('dashlet'));
 
-            if (empty($dashlet->getDashletId()) && $this->dashboard->getHome($newParent)->getName() === Dashboard::DEFAULT_HOME) {
+            if (empty($dashlet->getDashletId())
+                && $this->dashboard->getHome($newParent)->getName() === Dashboard::DEFAULT_HOME) {
                 throw new ProgrammingError('Dashlet doesn\'t contain an Id.');
             }
 
