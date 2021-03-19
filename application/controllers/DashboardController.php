@@ -231,7 +231,7 @@ class DashboardController extends ActionController
     {
         $dashboardHome = $this->getParam('home');
 
-        if ($dashboardHome === 'Available Dashlets') {
+        if ($dashboardHome === Dashboard::AVAILABLE_DASHLETS || $dashboardHome === Dashboard::SHARED_DASHBOARDS) {
             $this->view->tabeleView = true;
 
             $this->getTabs()->add($dashboardHome, [
@@ -239,7 +239,7 @@ class DashboardController extends ActionController
                 'url'   => Url::fromRequest()
             ])->activate($dashboardHome);
 
-            if ($dashboardHome === 'Available Dashlets') {
+            if ($dashboardHome === Dashboard::AVAILABLE_DASHLETS) {
                 $moduleManager = Icinga::app()->getModuleManager();
                 $dashlets = [];
 

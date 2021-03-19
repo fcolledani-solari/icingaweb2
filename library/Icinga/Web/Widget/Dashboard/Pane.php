@@ -73,6 +73,7 @@ class Pane extends UserWidget
     public function setParentId($homeId)
     {
         $this->parentId = $homeId;
+        return $this;
     }
 
     /**
@@ -93,6 +94,7 @@ class Pane extends UserWidget
     public function setPaneId($id)
     {
         $this->paneId = $id;
+        return $this;
     }
 
     /**
