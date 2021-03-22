@@ -11,6 +11,12 @@ CREATE TABLE `dashboard_home` (
     UNIQUE KEY(`name`)
 ) Engine=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `initially_loaded` (
+    `home_id` int(10) unsigned NOT NULL,
+    KEY `fk_initial_loaded_dashboard_home` (`home_id`),
+    CONSTRAINT `fk_initial_loaded_dashboard_home` FOREIGN KEY (`home_id`) REFERENCES `dashboard_home` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 CREATE TABLE `dashboard` (
     `id` int(10) unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `home_id` int(10) unsigned NOT NULL,
