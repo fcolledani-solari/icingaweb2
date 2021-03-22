@@ -44,10 +44,10 @@ class Dashboard extends AbstractWidget
      */
     const USER_HOME = 'User Home';
 
-    /** @var string Preserve name for coming features */
+    /** @var string Preserve key name for coming features */
     const AVAILABLE_DASHLETS = 'Available Dashlets';
 
-    /** @var string Preserve name for coming features */
+    /** @var string Preserve key name for coming features */
     const SHARED_DASHBOARDS = 'Shared Dashboards';
 
     /**
@@ -175,7 +175,7 @@ class Dashboard extends AbstractWidget
     }
 
     /**
-     * Load global dashboards provided by all enabled module
+     * Load global dashboards provided by all enabled modules
      *
      * with the dashboard() method and store them in the DB
      */
@@ -188,84 +188,73 @@ class Dashboard extends AbstractWidget
             if ($home !== self::DEFAULT_HOME) {
                 return false;
             }
+
+            if (array_key_exists(self::DEFAULT_HOME, $this->homes)) {
+                if ($this->isLoadedInitially($this->homes[self::DEFAULT_HOME]->getAttribute('homeId'))) {
+                    return false;
+                }
+            }
         }
 
         $navigation = new Navigation();
         $navigation->load('dashboard-pane');
 
         $db = $this->getConn();
-
         if (! array_key_exists(self::DEFAULT_HOME, $this->homes)) {
             $db->insert('dashboard_home', [
-                'name' => self::DEFAULT_HOME,
+                'name'  => self::DEFAULT_HOME,
                 'owner' => null
             ]);
 
             $parent = $db->lastInsertId();
+
+            $db->insert('initially_loaded', ['home_id' => $parent]);
         } else {
             $parent = $this->homes[self::DEFAULT_HOME]->getAttribute('homeId');
         }
 
-        $panes = array();
         foreach ($navigation as $dashboardPane) {
-            /** @var DashboardPane $dashboardPane */
-            $pane = new Pane($dashboardPane->getLabel());
-            $pane->setParentId($parent);
-
             if ($current = $this->hasHomePane($parent, $dashboardPane->getName())) {
                 $db->update('dashboard', [
                     'label' => $dashboardPane->getLabel()
                 ], [
-                    'id = ?' => $current->id,
-                    'home_id = ?' => $parent
+                    'id = ?'        => $current->id,
+                    'home_id = ?'   => $parent
                 ]);
-
-                $pane->setPaneId($current->id);
 
                 $paneId = $current->id;
             } else {
                 $db->insert('dashboard', [
-                    'home_id' => $parent,
-                    'name' => $dashboardPane->getName(),
-                    'label' => $dashboardPane->getLabel(),
-                    'disabled' => (int)$dashboardPane->getDisabled()
+                    'home_id'   => $parent,
+                    'name'      => $dashboardPane->getName(),
+                    'label'     => $dashboardPane->getLabel(),
+                    'disabled'  => (int)$dashboardPane->getDisabled()
                 ]);
 
                 $paneId = $db->lastInsertId();
-                $pane->setPaneId($paneId);
             }
 
             foreach ($dashboardPane->getChildren() as $dashlet) {
-                $pane->addDashlet($dashlet->getLabel(), $dashlet->getUrl());
-
                 if ($orgDashlet = $this->hasPaneDashlet($paneId, $dashlet->getName())) {
                     $db->update('dashlet', [
                         'label' => $dashlet->getLabel(),
-                        'url' => $dashlet->getUrl()->getRelativeUrl(),
+                        'url'   => $dashlet->getUrl()->getRelativeUrl(),
                     ], [
-                        'id = ?' => $orgDashlet->id,
-                        'dashboard_id = ?' => $paneId
+                        'id = ?'            => $orgDashlet->id,
+                        'dashboard_id = ?'  => $paneId
                     ]);
-
-                    $pane->getDashlet($dashlet->getLabel())->setDashletId($orgDashlet->id);
                 } else {
                     $db->insert('dashlet', [
-                        'dashboard_id' => $paneId,
-                        'owner' => $this->getUser()->getUsername(),
-                        'name' => $dashlet->getName(),
-                        'label' => $dashlet->getLabel(),
-                        'url' => $dashlet->getUrl()->getRelativeUrl(),
+                        'dashboard_id'  => $paneId,
+                        'owner'         => $this->getUser()->getUsername(),
+                        'name'          => $dashlet->getName(),
+                        'label'         => $dashlet->getLabel(),
+                        'url'           => $dashlet->getUrl()->getRelativeUrl(),
                     ]);
-
-                    $dashletId = $db->lastInsertId();
-                    $pane->getDashlet($dashlet->getLabel())->setDashletId($dashletId);
                 }
             }
-
-            $panes[] = $pane;
         }
 
-        $this->mergePanes($panes);
         return true;
     }
 
@@ -311,7 +300,7 @@ class Dashboard extends AbstractWidget
             $parentId = $this->homes[$home]->getAttribute('homeId');
         }
 
-        $select = $this->getDb()->select((new Select())
+        $select = $this->getConn()->select((new Select())
             ->columns('*')
             ->from('dashboard')
             ->where(['home_id = ?' => $parentId]));
@@ -380,6 +369,12 @@ class Dashboard extends AbstractWidget
             return false;
         }
 
+        if (array_key_exists(self::USER_HOME, $this->homes)) {
+            if ($this->isLoadedInitially($this->homes[self::USER_HOME]->getAttribute('homeId'))) {
+                return false;
+            }
+        }
+
         $db = $this->getConn();
         $this->loadHomeItems();
         if (! array_key_exists(self::USER_HOME, $this->homes)) {
@@ -389,6 +384,7 @@ class Dashboard extends AbstractWidget
             ]);
 
             $parent = $db->lastInsertId();
+            $db->insert('initially_loaded', ['home_id' => $parent]);
         } else {
             $parent = $this->homes[self::USER_HOME]->getAttribute('homeId');
         }
@@ -397,7 +393,7 @@ class Dashboard extends AbstractWidget
             if (strpos($key, '.') === false) {
                 if ($pane = $this->hasHomePane($parent, $key)) {
                     $db->update('dashboard', [
-                        'label'  => $part->get('title', $key),
+                        'label'     => $part->get('title', $key),
                         'disabled'  => (int)$part->get('disabled', 0)
                     ], [
                         'home_id = ?'   => $parent,
@@ -438,26 +434,6 @@ class Dashboard extends AbstractWidget
         }
 
         return true;
-    }
-
-    public function hasHomePane($parent, $pane)
-    {
-        $select = (new Select())
-            ->columns('*')
-            ->from('dashboard')
-            ->where(['home_id = ?'  => $parent, 'name = ?'  => $pane]);
-
-        return $this->getConn()->select($select)->fetch();
-    }
-
-    public function hasPaneDashlet($paneId, $dashlet)
-    {
-        $select = (new Select())
-            ->columns('*')
-            ->from('dashlet')
-            ->where(['dashboard_id = ?' => $paneId, 'name = ?'  => $dashlet]);
-
-        return $this->getConn()->select($select)->fetch();
     }
 
     /**
@@ -550,6 +526,36 @@ class Dashboard extends AbstractWidget
         }
 
         return $this->tabs;
+    }
+
+    public function hasHomePane($parent, $pane)
+    {
+        $select = (new Select())
+            ->columns('*')
+            ->from('dashboard')
+            ->where(['home_id = ?'  => $parent, 'name = ?'  => $pane]);
+
+        return $this->getConn()->select($select)->fetch();
+    }
+
+    public function hasPaneDashlet($paneId, $dashlet)
+    {
+        $select = (new Select())
+            ->columns('*')
+            ->from('dashlet')
+            ->where(['dashboard_id = ?' => $paneId, 'name = ?'  => $dashlet]);
+
+        return $this->getConn()->select($select)->fetch();
+    }
+
+    protected function isLoadedInitially($home)
+    {
+        $select = (new Select())
+            ->columns('*')
+            ->from('initially_loaded')
+            ->where(['home_id = ?'  => $home]);
+
+        return $this->getConn()->select($select)->fetch();
     }
 
     /**
