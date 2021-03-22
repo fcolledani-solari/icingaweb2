@@ -89,11 +89,9 @@
                 $target = this.getLinkTargetFor($form);
             }
 
-            if ($('input[type=submit]', $form).hasAttr('formaction')) {
-                if ($button.attr('name') === $('input[type=submit]', $form).attr('name')) {
-                    // Overwrite the URL of the form action with the one specified in formaction attr
-                    url = $('input[type=submit]', $form).attr('formaction');
-                }
+            if ($button.hasAttr('formaction')) {
+                // Overwrite the URL of the form action with the one specified in formaction attr
+                url = $button.attr('formaction');
             }
 
             if (! url) {
