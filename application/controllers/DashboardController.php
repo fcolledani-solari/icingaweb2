@@ -10,7 +10,6 @@ use Icinga\Forms\Dashboard\HomeAndPaneForm;
 use Icinga\Web\Controller\ActionController;
 use Icinga\Exception\Http\HttpNotFoundException;
 use Icinga\Forms\Dashboard\DashletForm;
-use Icinga\Web\Notification;
 use Icinga\Web\Widget\Dashboard;
 use Icinga\Web\Widget\Tabextension\DashboardSettings;
 use Zend_Controller_Action_Exception;
@@ -144,18 +143,17 @@ class DashboardController extends ActionController
         }
 
         $paneName = $this->getParam('pane');
-        if (!$this->dashboard->hasPane($paneName)) {
+        if (! $this->dashboard->hasPane($paneName)) {
             throw new HttpNotFoundException('Pane not found');
         }
 
         $paneForm = (new HomeAndPaneForm($this->dashboard))
             ->on(HomeAndPaneForm::ON_SUCCESS, function () {
-                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                    'home' => $this->getParam('home')
-                ]));
+                $this->redirectNow('__back__');
             })
             ->handleRequest(ServerRequest::fromGlobals());
 
+        $paneForm->load($this->dashboard->getPane($paneName));
         $this->view->form = $paneForm;
     }
 
@@ -167,7 +165,7 @@ class DashboardController extends ActionController
         }
 
         $paneName = $this->getParam('pane');
-        if (!$this->dashboard->hasPane($paneName)) {
+        if (! $this->dashboard->hasPane($paneName)) {
             throw new HttpNotFoundException('Pane not found');
         }
 
@@ -177,11 +175,17 @@ class DashboardController extends ActionController
                     'home' => $this->getParam('home')
                 ]));
             })
-            ->handleRequest(ServerRequest::fromGlobals());
+            ->handleRequest(ServerRequest::fromGlobals())
+            ->load($this->dashboard->getPane($paneName));
     }
 
     public function renameHomeAction()
     {
+        $this->getTabs()->add('rename-home', [
+            'title' => $this->translate('Update Home'),
+            'url'   => Url::fromRequest()
+        ])->activate('rename-home');
+
         if (! $this->getParam('home')) {
             throw new Zend_Controller_Action_Exception(
                 'Missing parameter "home"',
@@ -196,6 +200,7 @@ class DashboardController extends ActionController
             ]));
         })->handleRequest(ServerRequest::fromGlobals());
 
+        $homeForm->load($this->dashboard->getHomes()[$this->getParam('home')]);
         $this->view->form = $homeForm;
     }
 
@@ -224,7 +229,8 @@ class DashboardController extends ActionController
                         'home'  => $firstHome->getName()
                     ]));
                 }
-            })->handleRequest(ServerRequest::fromGlobals());
+            })->handleRequest(ServerRequest::fromGlobals())
+            ->load($this->dashboard->getHomes()[$this->getParam('home')]);
     }
 
     public function homeAction()

@@ -2,6 +2,7 @@
 
 namespace Icinga\Forms\Dashboard;
 
+use Icinga\Web\Navigation\NavigationItem;
 use Icinga\Web\Notification;
 use Icinga\Web\Widget\Dashboard;
 use ipl\Html\HtmlElement;
@@ -23,15 +24,6 @@ class HomeAndPaneForm extends CompatForm
     public function __construct($dashboard)
     {
         $this->dashboard = $dashboard;
-
-        $requestPath = Url::fromRequest()->getPath();
-        if ($requestPath === 'dashboard/rename-home') {
-            $home = Url::fromRequest()->getParam('home');
-            $this->populate(['name' => $home]);
-        } elseif ($requestPath === 'dashboard/rename-pane') {
-            $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
-            $this->populate(['name'  => $pane->getName()]);
-        }
     }
 
     /**
@@ -77,7 +69,6 @@ class HomeAndPaneForm extends CompatForm
                 'select',
                 'home',
                 [
-                    'class'         => 'autosubmit',
                     'required'      => true,
                     'label'         => t('Move to home'),
                     'multiOptions'  => $dashboardHomes,
@@ -95,6 +86,18 @@ class HomeAndPaneForm extends CompatForm
                 'description'   => $description
             ]
         );
+
+        if (Url::fromRequest()->getPath() === 'dashboard/rename-pane') {
+            $this->addElement(
+                'text',
+                'title',
+                [
+                    'required'      => true,
+                    'label'         => t('Title'),
+                    'description'   => t('Edit the current pane title')
+                ]
+            );
+        }
 
         $this->add(
             new HtmlElement(
@@ -132,7 +135,7 @@ class HomeAndPaneForm extends CompatForm
     public function renamePane()
     {
         $orgParent = Url::fromRequest()->getParam('home');
-        $newParent = $this->getValue('home');
+        $newParent = $this->getPopulatedValue('home');
         $parent = $this->navigation[$orgParent]->getAttribute('homeId');
         if ($orgParent !== $newParent) {
             $parent = $this->navigation[$newParent]->getAttribute('homeId');
@@ -144,8 +147,9 @@ class HomeAndPaneForm extends CompatForm
         $pane = $this->dashboard->getPane($paneName);
         $this->dashboard->getConn()->update('dashboard', [
             'home_id'   => $parent,
-            'name'      => $pane->getName(),
-        ], ['dashboard.id = ?' => $pane->getPaneId()]);
+            'name'      => $newName,
+            'label'     => $this->getPopulatedValue('title')
+        ], ['id = ?' => $pane->getPaneId()]);
 
         Notification::success(
             sprintf(t('Pane "%s" successfully renamed to "%s"'), $paneName, $newName)
@@ -202,6 +206,7 @@ class HomeAndPaneForm extends CompatForm
                 }
             }
 
+            $db->delete('initially_loaded', ['home_id = ?'  => $home->getAttribute('homeId')]);
             $db->delete('dashboard_home', ['id = ?' => $home->getAttribute('homeId')]);
 
             Notification::success(t('Dashboard home has been removed') . ': ' . $home->getName());
@@ -225,6 +230,23 @@ class HomeAndPaneForm extends CompatForm
             } else {
                 $this->removeHome();
             }
+        }
+    }
+
+    /**
+     * @param Dashboard\Pane|NavigationItem  $paneOrHome
+     */
+    public function load($paneOrHome)
+    {
+        if (Url::fromRequest()->getPath() !== 'dashboard/rename-pane') {
+            $this->populate([
+                'name'  => $paneOrHome->getName(),
+            ]);
+        } else {
+            $this->populate([
+                'name'  => $paneOrHome->getName(),
+                'title' => $paneOrHome->getTitle()
+            ]);
         }
     }
 }

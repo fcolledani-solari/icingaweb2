@@ -183,7 +183,7 @@ class DashletForm extends CompatForm
             );
         }
 
-        $this->add(Html::tag('hr'));
+        $this->add(new HtmlElement('hr'));
         $this->addElement(
             'textarea',
             'url',
@@ -265,6 +265,7 @@ class DashletForm extends CompatForm
             $db->insert('dashboard', [
                 'home_id'   => $newParent,
                 'name'      => $this->getValue('pane'),
+                'label'     => $this->getValue('pane'),
             ]);
 
             $paneId = $db->lastInsertId();
@@ -274,6 +275,7 @@ class DashletForm extends CompatForm
             'dashboard_id'  => $paneId,
             'owner'         => $this->dashboard->getUser()->getUsername(),
             'name'          => $this->getValue('dashlet'),
+            'label'         => $this->getValue('dashlet'),
             'url'           => $this->getValue('url')
         ]);
 
@@ -309,14 +311,15 @@ class DashletForm extends CompatForm
         $this->dashboard->loadUserDashboardsFromDatabase($newParent);
         if ($this->dashboard->hasPane($this->getValue('pane'))) {
             $newPane = $this->dashboard->getPane($this->getValue('pane'));
-            if ($newPane->getParentId() === $newParent && ! empty($paneId)) {
+            if ($newPane->getParentId() === $newParent) {
                 if ($paneId !== $newPane->getPaneId()) {
                     $paneId = $newPane->getPaneId();
                 }
             } else {
                 $db->insert('dashboard', [
                     'home_id'   => $newParent,
-                    'name'      => $this->getValue('pane')
+                    'name'      => $this->getValue('pane'),
+                    'label'     => $this->getValue('pane'),
                 ]);
 
                 $paneId = $db->lastInsertId();
@@ -325,44 +328,22 @@ class DashletForm extends CompatForm
             $db->insert('dashboard', [
                 'home_id'   => $newParent,
                 'name'      => $this->getValue('pane'),
+                'label'     => $this->getValue('pane'),
             ]);
 
             $paneId = $db->lastInsertId();
         }
 
-        try {
-            $dashlet = $pane->getDashlet($this->getValue('org_dashlet'));
-            $dashlet->setTitle($this->getValue('dashlet'));
+        $dashlet = $pane->getDashlet($this->getValue('org_dashlet'));
+        $dashlet->setTitle($this->getValue('dashlet'));
 
-            if (empty($dashlet->getDashletId())
-                && $this->dashboard->getHome($newParent)->getName() === Dashboard::DEFAULT_HOME) {
-                throw new ProgrammingError('Dashlet doesn\'t contain an Id.');
-            }
-
-            $db->update('dashlet', [
-                'dashboard_id'  => $paneId,
-                'owner'         => $this->dashboard->getUser()->getUsername(),
-                'name'          => $this->getValue('dashlet'),
-                'url'           => $this->getValue('url')
-            ], ['dashlet.id=?'  => $dashlet->getDashletId()]);
-        } catch (ProgrammingError $err) {
-            $name = $this->getValue('dashlet');
-            $url = $this->getValue('url');
-
-            foreach ($pane->getDashlets() as $dashlet) {
-                if ($dashlet->getName() !== $name) {
-                    $name = $dashlet->getName();
-                    $url = $dashlet->getUrl()->getRelativeUrl();
-                }
-
-                $db->insert('dashlet', [
-                    'dashboard_id'  => $paneId,
-                    'owner'         => $this->dashboard->getUser()->getUsername(),
-                    'name'          => $name,
-                    'url'           => $url
-                ]);
-            }
-        }
+        $db->update('dashlet', [
+            'dashboard_id'  => $paneId,
+            'owner'         => $this->dashboard->getUser()->getUsername(),
+            'name'          => $this->getValue('dashlet'),
+            'label'         => $this->getValue('dashlet'),
+            'url'           => $this->getValue('url')
+        ], ['dashlet.id=?'  => $dashlet->getDashletId()]);
 
         Notification::success(t('Dashlet updated'));
     }
