@@ -90,7 +90,7 @@
             }
 
             if ($('input[type=submit]', $form).hasAttr('formaction')) {
-                if ($button === $('input[type=submit]', $form)) {
+                if ($button.attr('name') === $('input[type=submit]', $form).attr('name')) {
                     // Overwrite the URL of the form action with the one specified in formaction attr
                     url = $('input[type=submit]', $form).attr('formaction');
                 }
