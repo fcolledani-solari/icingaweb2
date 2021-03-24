@@ -222,7 +222,6 @@ class Dashboard extends BaseHtmlElement
             }
         }
 
-        $this->panes = [];
         return true;
     }
 
@@ -262,7 +261,9 @@ class Dashboard extends BaseHtmlElement
      */
     public function loadUserDashboardsFromDatabase($parentId = 0)
     {
+        $this->panes = [];
         $dashboards = array();
+
         if (Url::fromRequest()->getParam('home')) {
             if ($parentId === 0) {
                 $home = Url::fromRequest()->getParam('home');
@@ -381,7 +382,6 @@ class Dashboard extends BaseHtmlElement
                     ]);
                 }
             } else {
-                //$this->loadUserDashboardsFromDatabase($parent);
                 list($paneName, $dashletName) = explode('.', $key, 2);
                 if ($this->hasPane($paneName)) {
                     $pane = $this->getPane($paneName);
@@ -407,8 +407,6 @@ class Dashboard extends BaseHtmlElement
                 }
             }
         }
-
-        $this->panes = [];
 
         return true;
     }
