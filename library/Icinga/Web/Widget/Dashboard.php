@@ -352,7 +352,8 @@ class Dashboard extends BaseHtmlElement
         if (array_key_exists(self::USER_HOME, $this->homes)) {
             if ($this->isLoadedInitially(
                 $this->homes[self::USER_HOME]->getAttribute('homeId'),
-                $this->user->getUsername())) {
+                $this->user->getUsername()
+            )) {
                 return false;
             }
         }
