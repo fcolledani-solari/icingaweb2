@@ -79,152 +79,162 @@ class DashletForm extends CompatForm
             }
         }
 
-        $submitLabel = t('Add To Dashboard');
-        $formTitle = t('Add Dashlet To Dashboard');
-
-        if (Url::fromRequest()->getPath() === 'dashboard/update-dashlet') {
-            $submitLabel = t('Update Dashlet');
-            $formTitle = t('Edit Dashlet');
-        }
-
-        $this->add(Html::tag('h1', $formTitle));
-        $this->addElement('hidden', 'org_pane', ['required'     => false]);
-        $this->addElement('hidden', 'org_parentId', ['required' => false]);
-        $this->addElement('hidden', 'org_dashlet', ['required'  => false]);
-        $this->addElement(
-            'checkbox',
-            'create_new_home',
-            [
-                'class'         => 'autosubmit',
-                'disabled'      => empty($dashboardHomes) ?: null,
-                'required'      => false,
-                'label'         => t('New Dashboard Home'),
-                'description'   => t('Check this box if you want to add the dashboard to a new dashboard home.'),
-            ]
-        );
-
-        $shouldDisable = empty($this->panes) || $this->getPopulatedValue('create_new_home') === 'y';
-        if (empty($dashboardHomes) || $this->getPopulatedValue('create_new_home') === 'y') {
-            if (empty($dashboardHomes)) {
-                $this->getElement('create_new_home')->addAttributes(['checked' => 'checked']);
-            }
-            $this->addElement(
-                'text',
-                'home',
-                [
-                    'required'      => true,
-                    'label'         => t('Dashboard Home'),
-                    'description'   => t('Enter a title for the new dashboard'),
-                ]
-            );
+        if (Url::fromRequest()->getPath() === 'dashboard/remove-dashlet') {
+            $this->add(new HtmlElement('h1', null, sprintf(
+                t('Please confirm removal of dashlet "%s"'),
+                Url::fromRequest()->getParam('dashlet')
+            )));
+            $this->addElement('submit', 'remove_dashlet', [
+                'label'          => t('Remove Dashlet'),
+            ]);
         } else {
-            if (! empty($this->panes)) {
-                $shouldDisable = false;
+            $submitLabel = t('Add To Dashboard');
+            $formTitle = t('Add Dashlet To Dashboard');
+
+            if (Url::fromRequest()->getPath() === 'dashboard/update-dashlet') {
+                $submitLabel = t('Update Dashlet');
+                $formTitle = t('Edit Dashlet');
             }
+
+            $this->add(Html::tag('h1', $formTitle));
+            $this->addElement('hidden', 'org_pane', ['required'     => false]);
+            $this->addElement('hidden', 'org_parentId', ['required' => false]);
+            $this->addElement('hidden', 'org_dashlet', ['required'  => false]);
             $this->addElement(
-                'select',
-                'home',
+                'checkbox',
+                'create_new_home',
                 [
                     'class'         => 'autosubmit',
-                    'required'      => true,
-                    'label'         => t('Dashboard Home'),
-                    'multiOptions'  => $dashboardHomes,
-                    'description'   => t('Select a dashboard home you want to add the dashboard to'),
+                    'disabled'      => empty($dashboardHomes) ?: null,
+                    'required'      => false,
+                    'label'         => t('New Dashboard Home'),
+                    'description'   => t('Check this box if you want to add the dashboard to a new dashboard home.'),
                 ]
             );
-        }
 
-        $this->addElement(
-            'checkbox',
-            'create_new_pane',
-            [
-                'class'         => 'autosubmit',
-                'disabled'      => $shouldDisable ?: null,
-                'required'      => false,
-                'label'         => t('New Dashboard'),
-                'description'   => t('Check this box if you want to add the dashlet to a new dashboard'),
-            ]
-        );
-
-        if (empty($this->panes) || $shouldDisable || $this->getPopulatedValue('create_new_pane') === 'y') {
-            if ($shouldDisable) {
-                $this->getElement('create_new_pane')->addAttributes(['checked' => 'checked']);
+            $shouldDisable = empty($this->panes) || $this->getPopulatedValue('create_new_home') === 'y';
+            if (empty($dashboardHomes) || $this->getPopulatedValue('create_new_home') === 'y') {
+                if (empty($dashboardHomes)) {
+                    $this->getElement('create_new_home')->addAttributes(['checked' => 'checked']);
+                }
+                $this->addElement(
+                    'text',
+                    'home',
+                    [
+                        'required'      => true,
+                        'label'         => t('Dashboard Home'),
+                        'description'   => t('Enter a title for the new dashboard'),
+                    ]
+                );
+            } else {
+                if (! empty($this->panes)) {
+                    $shouldDisable = false;
+                }
+                $this->addElement(
+                    'select',
+                    'home',
+                    [
+                        'class'         => 'autosubmit',
+                        'required'      => true,
+                        'label'         => t('Dashboard Home'),
+                        'multiOptions'  => $dashboardHomes,
+                        'description'   => t('Select a dashboard home you want to add the dashboard to'),
+                    ]
+                );
             }
+
+            $this->addElement(
+                'checkbox',
+                'create_new_pane',
+                [
+                    'class'         => 'autosubmit',
+                    'disabled'      => $shouldDisable ?: null,
+                    'required'      => false,
+                    'label'         => t('New Dashboard'),
+                    'description'   => t('Check this box if you want to add the dashlet to a new dashboard'),
+                ]
+            );
+
+            if (empty($this->panes) || $shouldDisable || $this->getPopulatedValue('create_new_pane') === 'y') {
+                if ($shouldDisable) {
+                    $this->getElement('create_new_pane')->addAttributes(['checked' => 'checked']);
+                }
+                $this->addElement(
+                    'text',
+                    'pane',
+                    [
+                        'required'      => true,
+                        'label'         => t('New Dashboard Title'),
+                        'description'   => t('Enter a title for the new dashboard'),
+                    ]
+                );
+            } else {
+                $this->addElement(
+                    'select',
+                    'pane',
+                    [
+                        'required'      => true,
+                        'label'         => t('Dashboard'),
+                        'multiOptions'  => $this->panes,
+                        'description'   => t('Select a dashboard you want to add the dashlet to'),
+                    ]
+                );
+            }
+
+            $this->add(new HtmlElement('hr'));
+            $this->addElement(
+                'textarea',
+                'url',
+                [
+                    'required'      => true,
+                    'label'         => t('Url'),
+                    'description'   => t(
+                        'Enter url to be loaded in the dashlet. You can paste the full URL, including filters.'
+                    ),
+                ]
+            );
+
             $this->addElement(
                 'text',
-                'pane',
+                'dashlet',
                 [
                     'required'      => true,
-                    'label'         => t('New Dashboard Title'),
-                    'description'   => t('Enter a title for the new dashboard'),
+                    'label'         => t('Dashlet Title'),
+                    'description'   => t('Enter a title for the dashlet.'),
                 ]
             );
-        } else {
-            $this->addElement(
-                'select',
-                'pane',
-                [
-                    'required'      => true,
-                    'label'         => t('Dashboard'),
-                    'multiOptions'  => $this->panes,
-                    'description'   => t('Select a dashboard you want to add the dashlet to'),
-                ]
+            $this->add(
+                new HtmlElement(
+                    'div',
+                    [
+                        'class' => 'control-group form-controls',
+                        'style' => 'position: relative;  margin-top: 2em;'
+                    ],
+                    [
+                        Url::fromRequest()->getPath() !== 'dashboard/update-dashlet' ? '' :
+                            new HtmlElement(
+                                'input',
+                                [
+                                    'class'         => 'btn-primary',
+                                    'type'          => 'submit',
+                                    'name'          => 'remove_dashlet',
+                                    'value'         => t('Remove Dashlet'),
+                                    'formaction'    => (string)Url::fromRequest()->setPath('dashboard/remove-dashlet')
+                                ]
+                            ),
+                        new HtmlElement(
+                            'input',
+                            [
+                                'class' => 'btn-primary',
+                                'type'  => 'submit',
+                                'name'  => 'submit',
+                                'value' => $submitLabel
+                            ]
+                        ),
+                    ]
+                )
             );
         }
-
-        $this->add(new HtmlElement('hr'));
-        $this->addElement(
-            'textarea',
-            'url',
-            [
-                'required'      => true,
-                'label'         => t('Url'),
-                'description'   => t(
-                    'Enter url to be loaded in the dashlet. You can paste the full URL, including filters.'
-                ),
-            ]
-        );
-
-        $this->addElement(
-            'text',
-            'dashlet',
-            [
-                'required'      => true,
-                'label'         => t('Dashlet Title'),
-                'description'   => t('Enter a title for the dashlet.'),
-            ]
-        );
-        $this->add(
-            new HtmlElement(
-                'div',
-                [
-                    'class' => 'control-group form-controls',
-                    'style' => 'position: relative;  margin-top: 2em;'
-                ],
-                [
-                    Url::fromRequest()->getPath() !== 'dashboard/update-dashlet' ? '' :
-                    new HtmlElement(
-                        'input',
-                        [
-                            'class'         => 'btn-primary',
-                            'type'          => 'submit',
-                            'name'          => 'remove_dashlet',
-                            'value'         => t('Remove Dashlet'),
-                            'formaction'    => (string)Url::fromRequest()->setPath('dashboard/remove-dashlet')
-                        ]
-                    ),
-                    new HtmlElement(
-                        'input',
-                        [
-                            'class' => 'btn-primary',
-                            'type'  => 'submit',
-                            'name'  => 'submit',
-                            'value' => $submitLabel
-                        ]
-                    ),
-                ]
-            )
-        );
     }
 
     public function createDashlet()
@@ -339,22 +349,17 @@ class DashletForm extends CompatForm
         Notification::success(t('Dashlet updated'));
     }
 
-    public function removeDashlet()
-    {
-        $dashlet = Url::fromRequest()->getParam('dashlet');
-        $pane = $this->dashboard->getPane($this->getValue('pane'));
-        $pane->removeDashlet($dashlet);
-
-        Notification::success(t('Dashlet has been removed from') . ' ' . $pane->getTitle());
-    }
-
     public function onSuccess()
     {
         if (Url::fromRequest()->getPath() === 'dashboard/new-dashlet') {
             $this->createDashlet();
         } else {
             if ($this->getPopulatedValue('remove_dashlet')) {
-                $this->removeDashlet();
+                $dashlet = Url::fromRequest()->getParam('dashlet');
+                $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
+                $pane->removeDashlet($dashlet);
+
+                Notification::success(t('Dashlet has been removed from') . ' ' . $pane->getTitle());
             } else {
                 $this->updateDashlet();
             }

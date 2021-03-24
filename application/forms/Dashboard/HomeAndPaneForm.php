@@ -38,6 +38,10 @@ class HomeAndPaneForm extends CompatForm
 
     public function assemble()
     {
+        $removeHome = 'dashboard/remove-home';
+        $renamePane = 'dashboard/rename-pane';
+        $removePane = 'dashboard/remove-pane';
+
         $home = Url::fromRequest()->getParam('home');
         $populated = $this->getPopulatedValue('home');
         $dashboardHomes = $this->dashboard->getHomeKeyNameArray();
@@ -48,13 +52,13 @@ class HomeAndPaneForm extends CompatForm
         $description    = t('Edit the current home name');
         $btnUpdateLabel = t('Update Home');
         $btnRemoveLabel = t('Remove Home');
-        $formaction     = (string)Url::fromRequest()->setPath('dashboard/remove-home');
+        $formaction     = (string)Url::fromRequest()->setPath($removeHome);
 
-        if (Url::fromRequest()->getPath() === 'dashboard/rename-pane') {
+        if ($renamePane === Url::fromRequest()->getPath()) {
             $description    = t('Edit the current pane name');
             $btnUpdateLabel = t('Update Pane');
             $btnRemoveLabel = t('Remove Pane');
-            $formaction     = (string)Url::fromRequest()->setPath('dashboard/remove-pane');
+            $formaction     = (string)Url::fromRequest()->setPath($removePane);
 
             $this->addElement(
                 'select',
@@ -68,6 +72,11 @@ class HomeAndPaneForm extends CompatForm
             );
         }
 
+        if ($removePane == Url::fromRequest()->getPath()) {
+            $btnRemoveLabel = t('Remove Pane');
+            $formaction = (string)Url::fromRequest()->setPath($removePane);
+        }
+
         $this->addElement(
             'text',
             'name',
@@ -78,7 +87,7 @@ class HomeAndPaneForm extends CompatForm
             ]
         );
 
-        if (Url::fromRequest()->getPath() === 'dashboard/rename-pane') {
+        if ($renamePane === Url::fromRequest()->getPath()) {
             $this->addElement(
                 'text',
                 'title',
@@ -109,6 +118,7 @@ class HomeAndPaneForm extends CompatForm
                             'formaction'        => $formaction
                         ]
                     ),
+                    $removeHome === Url::fromRequest()->getPath() || $removePane === Url::fromRequest()->getPath() ?'':
                     new HtmlElement(
                         'input',
                         [
@@ -155,7 +165,7 @@ class HomeAndPaneForm extends CompatForm
                 // Remove the given pane and it's dashlets
                 $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
                 $pane->removeDashlets();
-                $this->dashboard->removePane($pane->getTitle());
+                $this->dashboard->removePane($pane->getName());
 
                 Notification::success(t('Dashboard has been removed') . ': ' . $pane->getTitle());
             }
