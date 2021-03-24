@@ -161,7 +161,8 @@ class DashboardsController extends CompatController
                 } else {
                     $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
                         'home'  => $this->getParam('home')
-                    ]));                }
+                    ]));
+                }
             })
             ->handleRequest(ServerRequest::fromGlobals());
 

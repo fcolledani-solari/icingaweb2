@@ -23,9 +23,6 @@ class DashletForm extends CompatForm
     /** @var array dashboard pane items name=>title */
     private $panes = [];
 
-    /** @var array dashboard home navigation item name=>NavigationItem */
-    private $navigation = [];
-
     /**
      * DashletForm constructor.
      *
@@ -55,37 +52,29 @@ class DashletForm extends CompatForm
         $populated = $this->getPopulatedValue('home');
 
         if ($this->dashboard) {
+            $dashboardHomes = $this->dashboard->getHomeKeyNameArray();
             if (empty($populated) && ! empty($home)) {
-                $dashboardHomes[$home] = $home;
-            }
-
-            foreach ($this->dashboard->getHomes() as $name => $homeItem) {
-                $this->navigation[$name] = $homeItem;
-                if (! array_key_exists($name, $dashboardHomes)) {
-                    $dashboardHomes[$name] = $homeItem->getName();
-                }
+                $dashboardHomes = $this->dashboard->changeElementPos($dashboardHomes, $home);
             }
 
             if (empty($populated) && $this->getPopulatedValue('create_new_home') !== 'y') {
                 if (! empty($home)) {
-                    $this->panes = $this->dashboard->getPaneKeyNameArray(
-                        $this->navigation[$home]->getAttribute('homeId')
-                    );
+                    $this->panes = $this->dashboard->getPaneKeyTitleArray();
                 } else {
                     // This tab was opened from where the home parameter is not present
-                    $firstHome = reset($this->navigation);
+                    $firstHome = $this->dashboard->rewindHomes();
                     if (! empty($firstHome)) {
                         // Load dashboards from the DB by the given home Id
                         $this->dashboard->loadUserDashboardsFromDatabase($firstHome->getAttribute('homeId'));
-                        $this->panes = $this->dashboard->getPaneKeyNameArray($firstHome->getAttribute('homeId'));
+                        $this->panes = $this->dashboard->getPaneKeyTitleArray();
                     }
                 }
             } else {
                 if (array_key_exists($populated, $dashboardHomes)) {
-                    $homeId = $this->navigation[$populated]->getAttribute('homeId');
+                    $homeId = $this->dashboard->getHomes()[$populated]->getAttribute('homeId');
                     // We have to load dashboards each time the home Id changed
                     $this->dashboard->loadUserDashboardsFromDatabase($homeId);
-                    $this->panes = $this->dashboard->getPaneKeyNameArray($homeId);
+                    $this->panes = $this->dashboard->getPaneKeyTitleArray();
                 }
             }
         }
@@ -240,8 +229,9 @@ class DashletForm extends CompatForm
 
     public function createDashlet()
     {
+        $homes = $this->dashboard->getHomes();
         $db = $this->dashboard->getConn();
-        if (! array_key_exists($this->getValue('home'), $this->navigation)) {
+        if (! array_key_exists($this->getValue('home'), $homes)) {
             $db->insert('dashboard_home', [
                 'name'  => $this->getValue('home'),
                 'owner' => $this->dashboard->getUser()->getUsername()
@@ -249,7 +239,7 @@ class DashletForm extends CompatForm
 
             $newParent = $db->lastInsertId();
         } else {
-            $newParent = $this->navigation[$this->getValue('home')]->getAttribute('homeId');
+            $newParent = $homes[$this->getValue('home')]->getAttribute('homeId');
         }
 
         try {
@@ -284,13 +274,14 @@ class DashletForm extends CompatForm
 
     public function updateDashlet()
     {
+        $homes = $this->dashboard->getHomes();
         $db = $this->dashboard->getConn();
         $orgParent = (int)$this->getValue('org_parentId');
 
         if (Url::fromRequest()->getParam('home') === $this->getValue('home')) {
             $newParent = $orgParent;
-        } elseif (array_key_exists($this->getValue('home'), $this->navigation)) {
-            $newParent = $this->navigation[$this->getValue('home')]->getAttribute('homeId');
+        } elseif (array_key_exists($this->getValue('home'), $homes)) {
+            $newParent = $homes[$this->getValue('home')]->getAttribute('homeId');
         } else {
             $db->insert('dashboard_home', [
                 'name'  => $this->getValue('home'),

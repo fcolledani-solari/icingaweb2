@@ -158,12 +158,6 @@ class Dashboard extends BaseHtmlElement
             if ($home !== self::DEFAULT_HOME) {
                 return false;
             }
-
-            if (array_key_exists(self::DEFAULT_HOME, $this->homes)) {
-                if ($this->isLoadedInitially($this->homes[self::DEFAULT_HOME]->getAttribute('homeId'))) {
-                    return false;
-                }
-            }
         }
 
         $navigation = new Navigation();
@@ -177,8 +171,6 @@ class Dashboard extends BaseHtmlElement
             ]);
 
             $parent = $db->lastInsertId();
-
-            $db->insert('initially_loaded', ['home_id' => $parent]);
         } else {
             $parent = $this->homes[self::DEFAULT_HOME]->getAttribute('homeId');
         }
@@ -230,6 +222,7 @@ class Dashboard extends BaseHtmlElement
             }
         }
 
+        $this->panes = [];
         return true;
     }
 
@@ -302,7 +295,11 @@ class Dashboard extends BaseHtmlElement
             $newResults = $this->getDb()->select((new Select())
                 ->columns('*')
                 ->from('dashlet')
-                ->where(['dashboard_id = ?' => $dashboard->id, 'dashlet.owner = ?' => $this->user->getUsername()]));
+                ->where(['dashboard_id = ?'  => $dashboard->id])
+                ->where([
+                    'dashlet.owner = ?' => $this->user->getUsername(),
+                    'dashlet.owner IS NULL'
+                ], 'OR'));
 
             foreach ($newResults as $dashletData) {
                 if ((bool)$dashletData->disabled) {
@@ -349,15 +346,6 @@ class Dashboard extends BaseHtmlElement
             return false;
         }
 
-        if (array_key_exists(self::USER_HOME, $this->homes)) {
-            if ($this->isLoadedInitially(
-                $this->homes[self::USER_HOME]->getAttribute('homeId'),
-                $this->user->getUsername()
-            )) {
-                return false;
-            }
-        }
-
         $db = $this->getConn();
         $this->loadHomeItems();
         if (! array_key_exists(self::USER_HOME, $this->homes)) {
@@ -367,10 +355,6 @@ class Dashboard extends BaseHtmlElement
             ]);
 
             $parent = $db->lastInsertId();
-            $db->insert('initially_loaded', [
-                'home_id'   => $parent,
-                'owner'     => $this->user->getUsername()
-            ]);
         } else {
             $parent = $this->homes[self::USER_HOME]->getAttribute('homeId');
         }
@@ -397,6 +381,7 @@ class Dashboard extends BaseHtmlElement
                     ]);
                 }
             } else {
+                //$this->loadUserDashboardsFromDatabase($parent);
                 list($paneName, $dashletName) = explode('.', $key, 2);
                 if ($this->hasPane($paneName)) {
                     $pane = $this->getPane($paneName);
@@ -422,6 +407,8 @@ class Dashboard extends BaseHtmlElement
                 }
             }
         }
+
+        $this->panes = [];
 
         return true;
     }
@@ -583,21 +570,24 @@ class Dashboard extends BaseHtmlElement
             $parent = $this->homes[$home]->getAttribute('homeId');
             $this->removePanes($parent);
 
-            $this->getConn()->delete('initially_loaded', ['home_id = ?'  => $parent]);
             $this->getConn()->delete('dashboard_home', ['id = ?'    => $parent]);
         } else {
             throw new ProgrammingError('Home does not exist: ' . $home);
         }
     }
 
-    protected function isLoadedInitially($home, $user = null)
+    /**
+     * Return an array with home name=>name format used for comboboxes
+     *
+     * @return array
+     */
+    public function getHomeKeyNameArray()
     {
-        $select = (new Select())
-            ->columns('*')
-            ->from('initially_loaded')
-            ->where(['home_id = ?'  => $home, 'owner = ?'   => $user]);
-
-        return $this->getConn()->select($select)->fetch();
+        $list = array();
+        foreach ($this->homes as $name => $home) {
+            $list[$name] = $home->getName();
+        }
+        return $list;
     }
 
     /**
@@ -734,7 +724,6 @@ class Dashboard extends BaseHtmlElement
      */
     public function getPaneKeyTitleArray()
     {
-        //TODO: Shall we replace this method with the one implemented below?
         $list = array();
         foreach ($this->panes as $name => $pane) {
             $list[$name] = $pane->getTitle();
@@ -743,26 +732,8 @@ class Dashboard extends BaseHtmlElement
     }
 
     /**
-     * Return an array with pane name=>title format used for comboboxes
-     *
-     * @param $homeId
-     *
-     * @return array
+     * @inheritDoc
      */
-    public function getPaneKeyNameArray($homeId)
-    {
-        $lists = [];
-        foreach ($this->getPanes() as $name => $pane) {
-            if ($pane->getParentId() !== (int)$homeId) {
-                continue;
-            }
-
-            $lists[$name] = $pane->getTitle();
-        }
-
-        return $lists;
-    }
-
     public function assemble()
     {
         $this->add($this->determineActivePane()->getDashlets());
@@ -873,5 +844,29 @@ class Dashboard extends BaseHtmlElement
     public function rewindHomes()
     {
         return reset($this->homes);
+    }
+
+    /**
+     * Sets the position of the specified key of array element as the first
+     *
+     * element of the specified array list e.g $arr ['two' => 2, 'one' => 1]
+     *
+     * is going to be $arr ['one' => 1, 'two' => 2]
+     *
+     * @param array $list
+     *
+     * @param $key
+     *
+     * @return array
+     */
+    public function changeElementPos(array $list, $key)
+    {
+        array_unshift($list, $key);
+        $list = array_unique($list);
+
+        $keys = array_keys($list);
+        $keys[array_search(0, $keys, true)] = $key;
+
+        return array_combine($keys, $list);
     }
 }

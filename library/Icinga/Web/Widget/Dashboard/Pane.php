@@ -266,14 +266,6 @@ class Pane implements UserWidget
     }
 
     /**
-     * @see Widget::render
-     */
-    public function render()
-    {
-        return implode("\n", $this->dashlets) . "\n";
-    }
-
-    /**
      * Create, add and return a new dashlet
      *
      * @param   string  $title

@@ -14,8 +14,6 @@ class HomeAndPaneForm extends CompatForm
     /** @var Dashboard */
     private $dashboard;
 
-    private $navigation;
-
     /**
      * RenamePaneForm constructor.
      *
@@ -40,18 +38,11 @@ class HomeAndPaneForm extends CompatForm
 
     public function assemble()
     {
-        $dashboardHomes = [];
         $home = Url::fromRequest()->getParam('home');
         $populated = $this->getPopulatedValue('home');
+        $dashboardHomes = $this->dashboard->getHomeKeyNameArray();
         if ($populated === null) {
-            $dashboardHomes[$home] = $home;
-        }
-
-        foreach ($this->dashboard->getHomes() as $name => $homeItem) {
-            $this->navigation[$name] = $homeItem;
-            if (! array_key_exists($name, $dashboardHomes)) {
-                $dashboardHomes[$name] = $homeItem->getName();
-            }
+            $dashboardHomes = $this->dashboard->changeElementPos($dashboardHomes, $home);
         }
 
         $description    = t('Edit the current home name');
@@ -138,11 +129,13 @@ class HomeAndPaneForm extends CompatForm
         if ($requestPath === 'dashboard/rename-pane' || $requestPath === 'dashboard/remove-pane') {
             // Update the given pane
             if ($this->getPopulatedValue('btn_update')) {
+                $homes = $this->dashboard->getHomes();
                 $orgParent = Url::fromRequest()->getParam('home');
                 $newParent = $this->getPopulatedValue('home');
-                $parent = $this->navigation[$orgParent]->getAttribute('homeId');
+                $parent = $homes[$orgParent]->getAttribute('homeId');
+
                 if ($orgParent !== $newParent) {
-                    $parent = $this->navigation[$newParent]->getAttribute('homeId');
+                    $parent = $homes[$newParent]->getAttribute('homeId');
                 }
 
                 $paneName = Url::fromRequest()->getParam('pane');
@@ -164,7 +157,8 @@ class HomeAndPaneForm extends CompatForm
                 $pane->removeDashlets();
                 $this->dashboard->removePane($pane->getTitle());
 
-                Notification::success(t('Dashboard has been removed') . ': ' . $pane->getTitle());            }
+                Notification::success(t('Dashboard has been removed') . ': ' . $pane->getTitle());
+            }
         } else {
             // Update the given dashboard home
             if ($this->getPopulatedValue('btn_update')) {
