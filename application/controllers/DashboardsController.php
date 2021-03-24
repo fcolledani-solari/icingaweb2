@@ -46,15 +46,15 @@ class DashboardsController extends CompatController
                 ))->disableLegacyExtensions();
             } else {
                 if ($this->getParam('pane')) {
-                    $pane = $this->_getParam('pane');
+                    $pane = $this->getParam('pane');
                     $this->dashboard->activate($pane);
                 }
                 if ($this->dashboard === null) {
                     $this->setTitle('Dashboard');
                 } else {
                     $this->setTitle($this->dashboard->getActivePane()->getTitle());
-                    $this->content->setAttribute('class', 'dashboard content');
-                    $this->addContent($this->dashboard);
+
+                    $this->content = $this->dashboard;
                 }
             }
         }
@@ -95,8 +95,7 @@ class DashboardsController extends CompatController
                 $this->dashboard->activate($pane);
             }
 
-            $this->content->setAttribute('class', 'dashboard content');
-            $this->addContent($this->dashboard);
+            $this->content = $this->dashboard;
         }
     }
 
@@ -117,7 +116,7 @@ class DashboardsController extends CompatController
 
         $homeForm = new HomeAndPaneForm($this->dashboard);
         $homeForm->on(HomeAndPaneForm::ON_SUCCESS, function () use ($homeForm) {
-            $this->redirectNow(Url::fromPath('dashboards/settings')->addParams([
+            $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
                 'home'  => $homeForm->getValue('name')
             ]));
         })->handleRequest(ServerRequest::fromGlobals());
@@ -146,18 +145,23 @@ class DashboardsController extends CompatController
         $homeForm = (new HomeAndPaneForm($this->dashboard))
             ->setAction((string)Url::fromRequest())
             ->on(HomeAndPaneForm::ON_SUCCESS, function () {
-                // Since the navigation menu is not loaded that fast, we need to unset
-                // the just deleted home from this array as well.
-                unset($this->dashboard->getHomes()[$this->getParam('home')]);
+                if ($this->getParam('home') !== Dashboard::DEFAULT_HOME) {
+                    // Since the navigation menu is not loaded that fast, we need to unset
+                    // the just deleted home from this array as well.
+                    unset($this->dashboard->getHomes()[$this->getParam('home')]);
 
-                $firstHome = $this->dashboard->rewindHomes();
-                if (empty($firstHome)) {
-                    $this->redirectNow('dashboard');
+                    $firstHome = $this->dashboard->rewindHomes();
+                    if (empty($firstHome)) {
+                        $this->redirectNow('dashboard');
+                    } else {
+                        $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
+                            'home'  => $firstHome->getName()
+                        ]));
+                    }
                 } else {
                     $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
-                        'home'  => $firstHome->getName()
-                    ]));
-                }
+                        'home'  => $this->getParam('home')
+                    ]));                }
             })
             ->handleRequest(ServerRequest::fromGlobals());
 
@@ -185,7 +189,9 @@ class DashboardsController extends CompatController
 
         $paneForm = (new HomeAndPaneForm($this->dashboard))
             ->on(HomeAndPaneForm::ON_SUCCESS, function () {
-                $this->redirectNow('__back__');
+                $this->redirectNow(Url::fromPath('dashboard/home')->addParams([
+                    'home'  => $this->getParam('home')
+                ]));
             })
             ->handleRequest(ServerRequest::fromGlobals());
 
@@ -213,7 +219,7 @@ class DashboardsController extends CompatController
 
         $paneForm = (new HomeAndPaneForm($this->dashboard))
             ->on(HomeAndPaneForm::ON_SUCCESS, function () use ($home) {
-                $this->redirectNow(Url::fromPath('dashboards/settings')->addParams([
+                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
                     'home'  => $home
                 ]));
             })
@@ -233,7 +239,7 @@ class DashboardsController extends CompatController
 
         $dashletForm = new DashletForm($this->dashboard);
         $dashletForm->on(DashletForm::ON_SUCCESS, function () use ($dashletForm) {
-            $this->redirectNow(Url::fromPath('dashboards/home')->addParams([
+            $this->redirectNow(Url::fromPath('dashboard/home')->addParams([
                 'home'  => $dashletForm->getValue('home'),
                 'pane'  => $dashletForm->getValue('pane'),
             ]));
@@ -263,7 +269,7 @@ class DashboardsController extends CompatController
 
         $dashletForm = new DashletForm($this->dashboard);
         $dashletForm->on(DashletForm::ON_SUCCESS, function () use ($dashletForm) {
-            $this->redirectNow(Url::fromPath('dashboards/settings')->addParams([
+            $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
                 'home'  => $dashletForm->getValue('home')
             ]));
         })->handleRequest(ServerRequest::fromGlobals());
@@ -283,7 +289,7 @@ class DashboardsController extends CompatController
         $this->isMissingSomething();
         $dashletForm = (new DashletForm($this->dashboard))
             ->on(DashletForm::ON_SUCCESS, function () {
-                $this->redirectNow(Url::fromPath('dashboards/settings')->addParams([
+                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
                     'home'  => $this->getParam('home')
                 ]));
             })

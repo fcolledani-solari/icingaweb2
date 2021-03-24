@@ -132,103 +132,62 @@ class HomeAndPaneForm extends CompatForm
         );
     }
 
-    public function renamePane()
-    {
-        $orgParent = Url::fromRequest()->getParam('home');
-        $newParent = $this->getPopulatedValue('home');
-        $parent = $this->navigation[$orgParent]->getAttribute('homeId');
-        if ($orgParent !== $newParent) {
-            $parent = $this->navigation[$newParent]->getAttribute('homeId');
-        }
-
-        $paneName = Url::fromRequest()->getParam('pane');
-        $newName  = $this->getValue('name');
-
-        $pane = $this->dashboard->getPane($paneName);
-        $this->dashboard->getConn()->update('dashboard', [
-            'home_id'   => $parent,
-            'name'      => $newName,
-            'label'     => $this->getPopulatedValue('title')
-        ], ['id = ?' => $pane->getPaneId()]);
-
-        Notification::success(
-            sprintf(t('Pane "%s" successfully renamed to "%s"'), $paneName, $newName)
-        );
-    }
-
-    public function removePane()
-    {
-        $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
-        $db = $this->dashboard->getConn();
-
-        if (Url::fromRequest()->getParam('home') === Dashboard::DEFAULT_HOME) {
-            $db->update('dashboard', [
-                'disabled'  => true
-            ], ['id = ?'    => $pane->getPaneId()]);
-        } else {
-            $db->delete('dashlet', ['dashboard_id = ?' => $pane->getPaneId()]);
-            $db->delete('dashboard', [
-                'home_id = ?' => $pane->getParentId(),
-                'id = ?'      => $pane->getPaneId(),
-                'name = ?'    => $pane->getName()
-            ]);
-        }
-
-        Notification::success(t('Dashboard has been removed') . ': ' . $pane->getTitle());
-    }
-
-    public function renameHome()
-    {
-        $homes = $this->dashboard->getHomes();
-        $home = $homes[Url::fromRequest()->getParam('home')];
-
-        $this->dashboard->getConn()->update('dashboard_home', [
-            'name'   => $this->getValue('name')
-        ], ['id = ?' => $home->getAttribute('homeId')]);
-
-        Notification::success(
-            sprintf(t('Home "%s" successfully renamed to "%s"'), $home->getName(), $this->getValue('name'))
-        );
-    }
-
-    public function removeHome()
-    {
-        $homes = $this->dashboard->getHomes();
-        $home = $homes[Url::fromRequest()->getParam('home')];
-
-        $db = $this->dashboard->getConn();
-
-        if ($home->getName() !== Dashboard::DEFAULT_HOME) {
-            foreach ($this->dashboard->getPanes() as $pane) {
-                if ($pane->getParentId() === $home->getAttribute('homeId')) {
-                    $db->delete('dashlet', ['dashboard_id = ?'    => $pane->getPaneId()]);
-                    $db->delete('dashboard', ['home_id = ?'       => $home->getAttribute('homeId')]);
-                }
-            }
-
-            $db->delete('initially_loaded', ['home_id = ?'  => $home->getAttribute('homeId')]);
-            $db->delete('dashboard_home', ['id = ?' => $home->getAttribute('homeId')]);
-
-            Notification::success(t('Dashboard home has been removed') . ': ' . $home->getName());
-        } else {
-            Notification::warning(sprintf(t('%s home can\'t be deleted.'), Dashboard::DEFAULT_HOME));
-        }
-    }
-
     public function onSuccess()
     {
         $requestPath = Url::fromRequest()->getPath();
         if ($requestPath === 'dashboard/rename-pane' || $requestPath === 'dashboard/remove-pane') {
+            // Update the given pane
             if ($this->getPopulatedValue('btn_update')) {
-                $this->renamePane();
+                $orgParent = Url::fromRequest()->getParam('home');
+                $newParent = $this->getPopulatedValue('home');
+                $parent = $this->navigation[$orgParent]->getAttribute('homeId');
+                if ($orgParent !== $newParent) {
+                    $parent = $this->navigation[$newParent]->getAttribute('homeId');
+                }
+
+                $paneName = Url::fromRequest()->getParam('pane');
+                $newName  = $this->getValue('name');
+
+                $pane = $this->dashboard->getPane($paneName);
+                $this->dashboard->getConn()->update('dashboard', [
+                    'home_id'   => $parent,
+                    'name'      => $newName,
+                    'label'     => $this->getPopulatedValue('title')
+                ], ['id = ?' => $pane->getPaneId()]);
+
+                Notification::success(
+                    sprintf(t('Pane "%s" successfully renamed to "%s"'), $paneName, $newName)
+                );
             } else {
-                $this->removePane();
-            }
+                // Remove the given pane and it's dashlets
+                $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
+                $pane->removeDashlets();
+                $this->dashboard->removePane($pane->getTitle());
+
+                Notification::success(t('Dashboard has been removed') . ': ' . $pane->getTitle());            }
         } else {
+            // Update the given dashboard home
             if ($this->getPopulatedValue('btn_update')) {
-                $this->renameHome();
+                $homes = $this->dashboard->getHomes();
+                $home = $homes[Url::fromRequest()->getParam('home')];
+
+                $this->dashboard->getConn()->update('dashboard_home', [
+                    'name'   => $this->getValue('name')
+                ], ['id = ?' => $home->getAttribute('homeId')]);
+
+                Notification::success(
+                    sprintf(t('Home "%s" successfully renamed to "%s"'), $home->getName(), $this->getValue('name'))
+                );
             } else {
-                $this->removeHome();
+                // Remove the given home with it's panes and dashlets
+                $home = Url::fromRequest()->getParam('home');
+                if ($home !== Dashboard::DEFAULT_HOME) {
+                    $this->dashboard->removeHome($home);
+
+                    Notification::success(t('Dashboard home has been removed') . ': ' . $home);
+                } else {
+                    Notification::warning(sprintf(t('%s home can\'t be deleted.'), Dashboard::DEFAULT_HOME));
+                }
             }
         }
     }

@@ -6,7 +6,7 @@ namespace Icinga\Forms\Dashboard;
 use Icinga\Exception\ProgrammingError;
 use Icinga\Web\Notification;
 use Icinga\Web\Widget\Dashboard;
-use Icinga\Web\Widget\Dashboard\Dashlet;
+use Icinga\Web\Dashboard\Dashlet;
 use ipl\Html\Html;
 use ipl\Html\HtmlElement;
 use ipl\Web\Compat\CompatForm;
@@ -340,7 +340,7 @@ class DashletForm extends CompatForm
         $db->update('dashlet', [
             'dashboard_id'  => $paneId,
             'owner'         => $this->dashboard->getUser()->getUsername(),
-            'name'          => $this->getValue('dashlet'),
+            'name'          => $dashlet->getName(),
             'label'         => $this->getValue('dashlet'),
             'url'           => $this->getValue('url')
         ], ['dashlet.id=?'  => $dashlet->getDashletId()]);
@@ -352,16 +352,7 @@ class DashletForm extends CompatForm
     {
         $dashlet = Url::fromRequest()->getParam('dashlet');
         $pane = $this->dashboard->getPane($this->getValue('pane'));
-
-        if (Url::fromRequest()->getParam('home') === 'Default Dashboards') {
-            $this->dashboard->getConn()->update('dashlet', [
-                'disabled'  => true
-            ], ['id = ?' => $pane->getDashlet($dashlet)->getDashletId()]);
-        } else {
-            $this->dashboard->getConn()->delete('dashlet', [
-                'id = ?' => $pane->getDashlet($dashlet)->getDashletId()
-            ]);
-        }
+        $pane->removeDashlet($dashlet);
 
         Notification::success(t('Dashlet has been removed from') . ' ' . $pane->getTitle());
     }
