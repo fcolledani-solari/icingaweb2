@@ -3,15 +3,26 @@
 
 namespace Icinga\Web\Widget\Dashboard;
 
+use Icinga\Common\Database;
 use Icinga\Data\ConfigObject;
 use Icinga\Exception\ProgrammingError;
 use Icinga\Exception\ConfigurationError;
+use Icinga\Web\Dashboard\Dashlet;
 
 /**
  * A pane, displaying different Dashboard dashlets
  */
-class Pane extends UserWidget
+class Pane implements UserWidget
 {
+    use Database;
+
+    /**
+     * Flag if widget is created by an user
+     *
+     * @var bool
+     */
+    protected $userWidget = false;
+
     /**
      * The name of this pane, as defined in the ini file
      *
@@ -202,10 +213,17 @@ class Pane extends UserWidget
         if ($this->hasDashlet($title)) {
             $dashlet = $this->getDashlet($title);
             if ($dashlet->isUserWidget() === true) {
-                unset($this->dashlets[$title]);
+                $this->getDb()->delete('dashlet', [
+                    'dashboard_id = ?' => $this->paneId,
+                    'id = ?'            => $dashlet->getDashletId()
+                ]);
             } else {
-                $dashlet->setDisabled(true);
-                $dashlet->setUserWidget();
+                $this->getDb()->update('dashlet', [
+                    'disabled'  => true
+                ], [
+                    'dashboard_id = ?'  => $this->paneId,
+                    'id = ?'            => $dashlet->getDashletId()
+                ]);
             }
         } else {
             throw new ProgrammingError('Dashlet does not exist: ' . $title);
@@ -222,7 +240,13 @@ class Pane extends UserWidget
     public function removeDashlets(array $dashlets = null)
     {
         if ($dashlets === null) {
-            $this->dashlets = array();
+            if ($this->isUserWidget() === false) {
+                $this->getDb()->update('dashlet', [
+                    'disabled'  => true
+                ], ['dashboard_id = ?'  => $this->paneId]);
+            } else {
+                $this->getDb()->delete('dashlet', ['dashboard_id = ?'   => $this->paneId]);
+            }
         } else {
             foreach ($dashlets as $dashlet) {
                 $this->removeDashlet($dashlet);
@@ -246,13 +270,7 @@ class Pane extends UserWidget
      */
     public function render()
     {
-        $dashlets = array_filter(
-            $this->dashlets,
-            function ($e) {
-                return ! $e->getDisabled();
-            }
-        );
-        return implode("\n", $dashlets) . "\n";
+        return implode("\n", $this->dashlets) . "\n";
     }
 
     /**
@@ -273,9 +291,8 @@ class Pane extends UserWidget
     /**
      * Add a dashlet to this pane, optionally creating it if $dashlet is a string
      *
-     * @param string|Dashlet $dashlet               The dashlet object or title
-     *                                                  (if a new dashlet will be created)
-     * @param string|null $url                          An Url to be used when dashlet is a string
+     * @param string|Dashlet $dashlet The dashlet object or title (if a new dashlet will be created)
+     * @param string|null $url        An Url to be used when dashlet is a string
      *
      * @return $this
      * @throws \Icinga\Exception\ConfigurationError
@@ -386,5 +403,15 @@ class Pane extends UserWidget
     public function getDisabled()
     {
         return $this->disabled;
+    }
+
+    public function setUserWidget($userWidget = true)
+    {
+        $this->userWidget = (bool) $userWidget;
+    }
+
+    public function isUserWidget()
+    {
+        return $this->userWidget;
     }
 }

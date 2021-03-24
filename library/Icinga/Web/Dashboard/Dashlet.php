@@ -1,9 +1,11 @@
 <?php
+/* Icinga Web 2 | (c) 2021 Icinga Development Team | GPLv2+ */
 
 namespace Icinga\Web\Dashboard;
 
 use Icinga\Web\Url;
 use Icinga\Web\Widget\Dashboard\Pane;
+use Icinga\Web\Widget\Dashboard\UserWidget;
 use ipl\Html\BaseHtmlElement;
 use ipl\Html\HtmlElement;
 use ipl\Web\Widget\Link;
@@ -13,11 +15,18 @@ use ipl\Web\Widget\Link;
  *
  * This is the new element being used for the Dashlets view
  */
-class Dashlet extends BaseHtmlElement
+class Dashlet extends BaseHtmlElement implements UserWidget
 {
     protected $tag = 'div';
 
     protected $defaultAttributes = ['class' => 'container'];
+
+    /**
+     * Flag if widget is created by an user
+     *
+     * @var bool
+     */
+    protected $userWidget = false;
 
     /**
      * The url of this Dashlet
@@ -57,6 +66,13 @@ class Dashlet extends BaseHtmlElement
     /** @var integer Unique identifier of this dashlet */
     private $dashletId;
 
+    /**
+     * Create a new dashlet displaying the given url in the provided pane
+     *
+     * @param string $title     The title to use for this dashlet
+     * @param Url|string $url   The url this dashlet uses for displaying information
+     * @param Pane|null $pane   The pane this Dashlet will be added to
+     */
     public function __construct($title, $url, Pane $pane = null)
     {
         $this->name = $title;
@@ -99,6 +115,11 @@ class Dashlet extends BaseHtmlElement
         return $this->name;
     }
 
+    /**
+     * Retrieve the dashlets title
+     *
+     * @return string
+     */
     public function getTitle()
     {
         return $this->title;
@@ -253,5 +274,15 @@ class Dashlet extends BaseHtmlElement
     public function getPane()
     {
         return $this->pane;
+    }
+
+    public function setUserWidget($userWidget = true)
+    {
+        $this->userWidget = (bool) $userWidget;
+    }
+
+    public function isUserWidget()
+    {
+        return $this->userWidget;
     }
 }

@@ -95,7 +95,7 @@ class Settings extends BaseHtmlElement
                     $pane->getName(),
                     sprintf(
                         'dashboard/rename-pane?home=%s&pane=%s',
-                        $this->dashboard->getHome($pane->getParentId())->getName(),
+                        $this->dashboard->getHomeById($pane->getParentId())->getName(),
                         $pane->getName()
                     ),
                     [
@@ -125,7 +125,7 @@ class Settings extends BaseHtmlElement
                             $dashlet->getTitle(),
                             sprintf(
                                 'dashboard/update-dashlet?home=%s&pane=%s&dashlet=%s',
-                                $this->dashboard->getHome($pane->getParentId())->getName(),
+                                $this->dashboard->getHomeById($pane->getParentId())->getName(),
                                 $pane->getName(),
                                 $dashlet->getName()
                             ),
