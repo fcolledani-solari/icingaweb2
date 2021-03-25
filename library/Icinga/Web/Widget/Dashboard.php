@@ -177,32 +177,36 @@ class Dashboard extends BaseHtmlElement
 
         $this->loadUserDashboardsFromDatabase($parent);
         foreach ($navigation as $dashboardPane) {
-            if ($this->hasPane($dashboardPane->getName())) {
-                $current = $this->getPane($dashboardPane->getName());
-
+            if ($pane = $this->hasPaneUid($dashboardPane->getAttribute('uid'))) {
                 $db->update('dashboard', [
                     'label' => $dashboardPane->getLabel()
                 ], [
-                    'id = ?'        => $current->getPaneId(),
+                    'uid = ?'        => $dashboardPane->getAttribute('uid'),
                     'home_id = ?'   => $parent
                 ]);
 
-                $paneId = $current->getPaneId();
+                $paneId = $pane->getPaneId();
+                $newPaneName = $pane->getName();
             } else {
                 $db->insert('dashboard', [
                     'home_id'   => $parent,
+                    'uid'       => $dashboardPane->getAttribute('uid'),
                     'name'      => $dashboardPane->getName(),
                     'label'     => $dashboardPane->getLabel(),
                     'disabled'  => (int)$dashboardPane->getDisabled()
                 ]);
 
-                $this->createPane($dashboardPane->getLabel());
                 $paneId = $db->lastInsertId();
+                $newPaneName = $dashboardPane->getName();
             }
 
-            $pane = $this->getPane($dashboardPane->getLabel());
+            $pane = null;
+            if ($this->hasPane($newPaneName)) {
+                $pane = $this->getPane($newPaneName);
+            }
+
             foreach ($dashboardPane->getChildren() as $dashlet) {
-                if ($pane->hasDashlet($dashlet->getLabel())) {
+                if (! empty($pane) && $pane->hasDashlet($dashlet->getLabel())) {
                     $db->update('dashlet', [
                         'label' => $dashlet->getLabel(),
                         'url'   => $dashlet->getUrl()->getRelativeUrl(),
@@ -287,6 +291,7 @@ class Dashboard extends BaseHtmlElement
             $dashboards[$dashboard->name] = (new Pane($dashboard->name))
                 ->setPaneId($dashboard->id)
                 ->setParentId($dashboard->home_id)
+                ->setGlobalUid($dashboard->uid)
                 ->setTitle($dashboard->label);
 
             if ($dashboard->name !== self::DEFAULT_HOME) {
@@ -634,6 +639,25 @@ class Dashboard extends BaseHtmlElement
     public function hasPane($pane)
     {
         return $pane && array_key_exists($pane, $this->panes);
+    }
+
+    /**
+     * Check if any of the panes contains the given uid
+     *
+     * @param $uid
+     *
+     * @return false|Pane
+     */
+    public function hasPaneUid($uid)
+    {
+        foreach ($this->panes as $pane) {
+            if ($pane->getGlobalUid() === $uid)
+            {
+                return $pane;
+            }
+        }
+
+        return false;
     }
 
     /**

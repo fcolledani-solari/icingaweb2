@@ -14,9 +14,11 @@ CREATE TABLE `dashboard_home` (
 CREATE TABLE `dashboard` (
     `id` int(10) unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `home_id` int(10) unsigned NOT NULL,
+    `uid` varchar(64) NULL COLLATE utf8mb4_unicode_ci,
     `name` varchar(64) NOT NULL COLLATE utf8mb4_unicode_ci,
     `label` varchar(64) NOT NULL COLLATE utf8mb4_unicode_ci,
-    `disabled` tinyint(1) DEFAULT 0
+    `disabled` tinyint(1) DEFAULT 0,
+    UNIQUE KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `dashlet` (
