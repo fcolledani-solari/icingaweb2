@@ -176,6 +176,8 @@ class Dashboard extends BaseHtmlElement
         }
 
         $this->loadUserDashboardsFromDatabase($parent);
+
+        /** @var NavigationItem $dashboardPane */
         foreach ($navigation as $dashboardPane) {
             if ($pane = $this->hasPaneUid($dashboardPane->getAttribute('uid'))) {
                 $db->update('dashboard', [
@@ -205,13 +207,14 @@ class Dashboard extends BaseHtmlElement
                 $pane = $this->getPane($newPaneName);
             }
 
+            /** @var NavigationItem $dashlet */
             foreach ($dashboardPane->getChildren() as $dashlet) {
-                if (! empty($pane) && $pane->hasDashlet($dashlet->getLabel())) {
+                if (! empty($pane) && $found = $pane->hasDashletUid($dashlet->getAttribute('uid'))) {
                     $db->update('dashlet', [
                         'label' => $dashlet->getLabel(),
                         'url'   => $dashlet->getUrl()->getRelativeUrl(),
                     ], [
-                        'id = ?'            => $pane->getDashlet($dashlet->getLabel())->getDashletId(),
+                        'id = ?'            => $found->getDashletId(),
                         'dashboard_id = ?'  => $paneId
                     ]);
                 } else {
@@ -221,6 +224,7 @@ class Dashboard extends BaseHtmlElement
                         'name'          => $dashlet->getName(),
                         'label'         => $dashlet->getLabel(),
                         'url'           => $dashlet->getUrl()->getRelativeUrl(),
+                        'uid'           => $dashlet->getAttribute('uid')
                     ]);
                 }
             }
@@ -318,6 +322,7 @@ class Dashboard extends BaseHtmlElement
                     $dashboards[$dashboard->name]
                 ))
                     ->setName($dashletData->name)
+                    ->setGlobalUid($dashletData->uid)
                     ->setDashletId($dashletData->id);
 
                 if ($dashboard->name !== self::DEFAULT_HOME) {
@@ -642,7 +647,7 @@ class Dashboard extends BaseHtmlElement
     }
 
     /**
-     * Check if any of the panes contains the given uid
+     * Check and get if any of the panes contains the given uid
      *
      * @param $uid
      *
@@ -650,9 +655,9 @@ class Dashboard extends BaseHtmlElement
      */
     public function hasPaneUid($uid)
     {
+        /** @var Pane $pane */
         foreach ($this->panes as $pane) {
-            if ($pane->getGlobalUid() === $uid)
-            {
+            if ($pane->getGlobalUid() === $uid) {
                 return $pane;
             }
         }

@@ -215,6 +215,27 @@ class Pane implements UserWidget
     }
 
     /**
+     * Check and get if any of the dashlets of this
+     *
+     * pane contains the given uid
+     *
+     * @param  string $uid
+     *
+     * @return false|Dashlet
+     */
+    public function hasDashletUid($uid)
+    {
+        /** @var Dashlet $dashlet */
+        foreach ($this->dashlets as $dashlet) {
+            if ($dashlet->getGlobalUid() === $uid) {
+                return $dashlet;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Return a dashlet with the given name if existing
      *
      * @param string $title         The title of the dashlet to return

@@ -366,9 +366,10 @@ class Module
             $dashlets = [];
             foreach ($pane->getDashlets() as $dashletName => $dashletConfig) {
                 $dashlets[$dashletName] = [
-                    'label'     => $this->translate($dashletName),
-                    'url'       => $dashletConfig['url'],
-                    'priority'  => $dashletConfig['priority']
+                    'label'         => $this->translate($dashletName),
+                    'url'           => $dashletConfig['url'],
+                    'priority'      => $dashletConfig['priority'],
+                    'attributes'    => $dashletConfig['properties']
                 ];
             }
 

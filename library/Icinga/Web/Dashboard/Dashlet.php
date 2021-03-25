@@ -67,6 +67,13 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     private $dashletId;
 
     /**
+     * Global unique identifier of this dashlet
+     *
+     * @var string
+     */
+    private $globalUid;
+
+    /**
      * Create a new dashlet displaying the given url in the provided pane
      *
      * @param string $title     The title to use for this dashlet
@@ -190,6 +197,30 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     {
         $this->progressLabel = $label;
         return $this;
+    }
+
+    /**
+     * Set the global unique id of this dashlet
+     *
+     * @param  string $uid
+     *
+     * @return $this
+     */
+    public function setGlobalUid($uid)
+    {
+        $this->globalUid = $uid;
+
+        return $this;
+    }
+
+    /**
+     * Get the global unique id of this dashlet
+     *
+     * @return string
+     */
+    public function getGlobalUid()
+    {
+        return $this->globalUid;
     }
 
     /**
