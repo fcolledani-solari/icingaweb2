@@ -190,7 +190,7 @@ class DashboardsController extends CompatController
 
         $paneForm = (new HomeAndPaneForm($this->dashboard))
             ->on(HomeAndPaneForm::ON_SUCCESS, function () {
-                $this->redirectNow(Url::fromPath('dashboard/home')->addParams([
+                $this->redirectNow(Url::fromPath('dashboard/settings')->addParams([
                     'home'  => $this->getParam('home')
                 ]));
             })

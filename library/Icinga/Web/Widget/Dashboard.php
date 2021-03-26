@@ -180,12 +180,14 @@ class Dashboard extends BaseHtmlElement
         /** @var NavigationItem $dashboardPane */
         foreach ($navigation as $dashboardPane) {
             if ($pane = $this->hasPaneUid($dashboardPane->getAttribute('uid'))) {
-                $db->update('dashboard', [
-                    'label' => $dashboardPane->getLabel()
-                ], [
-                    'uid = ?'        => $dashboardPane->getAttribute('uid'),
-                    'home_id = ?'   => $parent
-                ]);
+                if ($pane->getTitle() !== $dashboardPane->getLabel()) {
+                    $db->update('dashboard', [
+                        'label' => $dashboardPane->getLabel()
+                    ], [
+                        'uid = ?' => $dashboardPane->getAttribute('uid'),
+                        'home_id = ?' => $parent
+                    ]);
+                }
 
                 $paneId = $pane->getPaneId();
                 $newPaneName = $pane->getName();
@@ -210,6 +212,11 @@ class Dashboard extends BaseHtmlElement
             /** @var NavigationItem $dashlet */
             foreach ($dashboardPane->getChildren() as $dashlet) {
                 if (! empty($pane) && $found = $pane->hasDashletUid($dashlet->getAttribute('uid'))) {
+                    if ($found->getTitle() === $dashlet->getLabel() &&
+                        $found->getUrl()->getRelativeUrl() === $dashlet->getUrl()->getRelativeUrl()) {
+                        continue;
+                    }
+
                     $db->update('dashlet', [
                         'label' => $dashlet->getLabel(),
                         'url'   => $dashlet->getUrl()->getRelativeUrl(),
@@ -432,28 +439,34 @@ class Dashboard extends BaseHtmlElement
     {
         /** @var $pane Pane  */
         foreach ($panes as $pane) {
+            if (empty($pane->getParentId()) || empty($pane->getPaneId())) {
+                throw new ProgrammingError(
+                    'Pane "%s" doesn\'t contain %s',
+                    $pane->getName(),
+                    $pane->getPaneId() ? $pane->getParentId() : $pane->getPaneId()
+                );
+            }
+
             if ($this->hasPane($pane->getName()) === true) {
                 /** @var $current Pane */
                 $current = $this->panes[$pane->getName()];
 
-                if ($current->getParentId() === $pane->getParentId()) {
-                    $this->getConn()->update('dashboard', [
-                        'label' => $pane->getTitle(),
-                    ], [
-                        'id = ?'        => $pane->getPaneId(),
-                        'home_id = ?'   => $pane->getParentId()
-                    ]);
+                $this->getConn()->update('dashboard', [
+                    'label' => $pane->getTitle(),
+                ], [
+                    'id = ?'        => $current->getPaneId(),
+                    'home_id = ?'   => $current->getParentId()
+                ]);
 
-                    foreach ($current->getDashlets() as $dashlet) {
-                        if (! $pane->hasDashlet($dashlet->getTitle())) {
-                            $this->getConn()->insert('dashlet', [
-                                'dashboard_id'  => $pane->getPaneId(),
-                                'owner'         => $this->user->getUsername(),
-                                'name'          => $dashlet->getName(),
-                                'label'         => $dashlet->getTitle(),
-                                'url'           => $dashlet->getUrl()->getRelativeUrl()
-                            ]);
-                        }
+                foreach ($current->getDashlets() as $dashlet) {
+                    if (! $pane->hasDashlet($dashlet->getTitle())) {
+                        $this->getConn()->insert('dashlet', [
+                            'dashboard_id'  => $pane->getPaneId(),
+                            'owner'         => $this->user->getUsername(),
+                            'name'          => $dashlet->getName(),
+                            'label'         => $dashlet->getTitle(),
+                            'url'           => $dashlet->getUrl()->getRelativeUrl()
+                        ]);
                     }
                 }
             } else {
@@ -473,7 +486,7 @@ class Dashboard extends BaseHtmlElement
      */
     public function getTabs($defaultPane = false)
     {
-        $url = Url::fromPath('dashboards')->getUrlWithout($this->tabParam);
+        $url = Url::fromPath('dashboard')->getUrlWithout($this->tabParam);
         if ($this->tabs === null) {
             $this->tabs = new Tabs();
             $this->tabs->disableLegacyExtensions();
@@ -484,11 +497,11 @@ class Dashboard extends BaseHtmlElement
                 }
                 if (Url::fromRequest()->hasParam('home')) {
                     try {
-                        $url = Url::fromPath('dashboards/home')->addParams([
+                        $url = Url::fromPath('dashboard/home')->addParams([
                             'home'   => $this->getHomeById($pane->getParentId())->getName(),
                         ]);
                     } catch (ProgrammingError $e) {
-                        $url = Url::fromPath('dashboards/home');
+                        $url = Url::fromPath('dashboard/home');
                     }
                 }
                 $this->tabs->add(
@@ -568,6 +581,15 @@ class Dashboard extends BaseHtmlElement
         );
     }
 
+    /**
+     * Remove a specific home from this dashboard
+     *
+     * @param string $home
+     *
+     * @return $this
+     *
+     * @throws ProgrammingError
+     */
     public function removeHome($home)
     {
         if (array_key_exists($home, $this->homes)) {
@@ -582,6 +604,8 @@ class Dashboard extends BaseHtmlElement
         } else {
             throw new ProgrammingError('Home does not exist: ' . $home);
         }
+
+        return $this;
     }
 
     /**
@@ -607,7 +631,6 @@ class Dashboard extends BaseHtmlElement
     {
         return $this->panes;
     }
-
 
     /**
      * Creates a new empty pane with the given title
