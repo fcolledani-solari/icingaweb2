@@ -141,6 +141,16 @@ class HomeAndPaneForm extends CompatForm
             if ($this->getPopulatedValue('btn_update')) {
                 $homes = $this->dashboard->getHomes();
                 $orgParent = Url::fromRequest()->getParam('home');
+
+                if (Dashboard::DEFAULT_HOME === $orgParent) {
+                    Notification::info(sprintf(
+                        t('Default pane "%s" can\'t be edited'),
+                        Url::fromRequest()->getParam('pane')
+                    ));
+
+                    return;
+                }
+
                 $newParent = $this->getPopulatedValue('home');
                 $parent = $homes[$orgParent]->getAttribute('homeId');
 
@@ -174,6 +184,15 @@ class HomeAndPaneForm extends CompatForm
             if ($this->getPopulatedValue('btn_update')) {
                 $homes = $this->dashboard->getHomes();
                 $home = $homes[Url::fromRequest()->getParam('home')];
+
+                if (Dashboard::DEFAULT_HOME === $home->getName()) {
+                    Notification::info(sprintf(
+                        t('Default home "%s" can\'t be edited'),
+                        $home->getName()
+                    ));
+
+                    return;
+                }
 
                 $this->dashboard->getConn()->update('dashboard_home', [
                     'name'   => $this->getValue('name')

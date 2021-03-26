@@ -288,6 +288,15 @@ class DashletForm extends CompatForm
         $db = $this->dashboard->getConn();
         $orgParent = (int)$this->getValue('org_parentId');
 
+        if ($homes[Dashboard::DEFAULT_HOME]->getAttribute('homeId') === $orgParent) {
+            Notification::info(sprintf(
+                t('Default dashlet "%s" can\'t be edited'),
+                $this->getValue('org_dashlet')
+            ));
+
+            return;
+        }
+
         if (Url::fromRequest()->getParam('home') === $this->getValue('home')) {
             $newParent = $orgParent;
         } elseif (array_key_exists($this->getValue('home'), $homes)) {
