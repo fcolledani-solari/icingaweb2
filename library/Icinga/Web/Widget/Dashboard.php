@@ -812,12 +812,13 @@ class Dashboard extends BaseHtmlElement
             );
         } else {
             $this->setAttribute('class', 'content');
+            $format = t(
+                'Currently there is no dashlet available. This might change once you enabled some of the available %s.'
+            );
+
             $dashlets = [
                 new HtmlElement('h1', null, t('Welcome to Icinga Web!')),
-                sprintf(
-                    t('Currently there is no dashlet available. This might change once you enabled some of the available %s.'),
-                    new Link('modules', 'config/modules')
-                )
+                sprintf($format, new Link('modules', 'config/modules'))
             ];
         }
 
