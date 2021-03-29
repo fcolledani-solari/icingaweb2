@@ -304,7 +304,7 @@ class Dashboard extends BaseHtmlElement
                 ->setDisabled($dashboard->disabled)
                 ->setTitle($dashboard->label);
 
-            if ($dashboard->name !== self::DEFAULT_HOME) {
+            if ($this->getHomeById($parentId)->getName() !== self::DEFAULT_HOME) {
                 $dashboards[$dashboard->name]->setUserWidget();
             }
 
@@ -328,7 +328,7 @@ class Dashboard extends BaseHtmlElement
                     ->setDashletId($dashletData->id)
                     ->setDisabled($dashletData->disabled);
 
-                if ($dashboard->name !== self::DEFAULT_HOME) {
+                if ($this->getHomeById($parentId)->getName() !== self::DEFAULT_HOME) {
                     $dashlet->setUserWidget();
                 }
 

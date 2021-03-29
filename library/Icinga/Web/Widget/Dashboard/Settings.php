@@ -104,21 +104,17 @@ class Settings extends BaseHtmlElement
                     'colspan'   => '2',
                     'style'     => 'text-align: left; padding: 0.5em;'
                 ]);
-                if ($pane->isUserWidget()) {
-                    $th->add(new Link(
-                        $pane->getName(),
-                        sprintf(
-                            'dashboard/rename-pane?home=%s&pane=%s',
-                            $this->dashboard->getHomeById($pane->getParentId())->getName(),
-                            $pane->getName()
-                        ),
-                        [
-                            'title' => sprintf(t('Edit pane %s'), $pane->getName())
-                        ]
-                    ));
-                } else {
-                    $th->add($pane->getName());
-                }
+                $th->add(new Link(
+                    $pane->getName(),
+                    sprintf(
+                        'dashboard/rename-pane?home=%s&pane=%s',
+                        $this->dashboard->getHomeById($pane->getParentId())->getName(),
+                        $pane->getName()
+                    ),
+                    [
+                        'title' => sprintf(t('Edit pane %s'), $pane->getName())
+                    ]
+                ));
 
                 $tableRow->add($th);
                 $dashlets = array_filter(
