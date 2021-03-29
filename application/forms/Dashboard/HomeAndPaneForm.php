@@ -49,6 +49,19 @@ class HomeAndPaneForm extends CompatForm
             $dashboardHomes = $this->dashboard->changeElementPos($dashboardHomes, $home);
         }
 
+        $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
+        if ($pane->getDisabled()) {
+            $this->addElement(
+                'checkbox',
+                'enable_pane',
+                [
+                    'label'         => t('Enable Pane'),
+                    'value'         => 'y',
+                    'description'   => t('Uncheck this checkbox if you want to enable this pane.')
+                ]
+            );
+        }
+
         $description    = t('Edit the current home name');
         $btnUpdateLabel = t('Update Home');
         $btnRemoveLabel = t('Remove Home');
@@ -138,19 +151,23 @@ class HomeAndPaneForm extends CompatForm
         $requestPath = Url::fromRequest()->getPath();
         if ($requestPath === 'dashboard/rename-pane' || $requestPath === 'dashboard/remove-pane') {
             // Update the given pane
+            $paneName = Url::fromRequest()->getParam('pane');
+            $pane = $this->dashboard->getPane($paneName);
+
             if ($this->getPopulatedValue('btn_update')) {
                 $homes = $this->dashboard->getHomes();
                 $orgParent = Url::fromRequest()->getParam('home');
 
-                $paneName = Url::fromRequest()->getParam('pane');
-                $pane = $this->dashboard->getPane($paneName);
-
                 if (! empty($pane->getGlobalUid())) {
-                    Notification::info(sprintf(
-                        t('Default pane "%s" can\'t be edited.'),
-                        Url::fromRequest()->getParam('pane')
-                    ));
+                    $disabled = (int)true;
+                    if ($this->getPopulatedValue('enable_pane') === 'n') {
+                        $disabled = (int)false;
+                    }
+                    $this->dashboard->getConn()->update('dashboard', [
+                        'disabled'    => $disabled
+                    ], ['id = ?'    => $pane->getPaneId()]);
 
+                    Notification::info(sprintf(t('Default pane "%s" can\'t be edited.'), $paneName));
                     return;
                 }
 
@@ -173,8 +190,9 @@ class HomeAndPaneForm extends CompatForm
                 );
             } else {
                 // Remove the given pane and it's dashlets
-                $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
-                $pane->removeDashlets();
+                if (empty($pane->getGlobalUid())) {
+                    $pane->removeDashlets();
+                }
                 $this->dashboard->removePane($pane->getName());
 
                 Notification::success(t('Dashboard has been removed.') . ': ' . $pane->getTitle());

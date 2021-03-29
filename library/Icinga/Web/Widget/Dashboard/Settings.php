@@ -80,21 +80,15 @@ class Settings extends BaseHtmlElement
             $tbody->add($tableRow);
         }
 
-        $panes = array_filter(
-            $this->dashboard->getPanes(),
-            function ($pane) {
-                return ! $pane->getDisabled();
-            }
-        );
-
-        if (empty($panes)) {
+        if (empty($this->dashboard->getPanes())) {
             $tbody->add(new HtmlElement(
                 'tr',
                 null,
                 new HtmlElement('td', ['colspan' => '3'], t('Currently there is no dashboard available.'))
             ));
         } else {
-            foreach ($panes as $pane) {
+            /** @var Pane $pane */
+            foreach ($this->dashboard->getPanes() as $pane) {
                 if ($pane->getParentId() !== $home->getAttribute('homeId')) {
                     continue;
                 }
@@ -105,7 +99,7 @@ class Settings extends BaseHtmlElement
                     'style'     => 'text-align: left; padding: 0.5em;'
                 ]);
                 $th->add(new Link(
-                    $pane->getName(),
+                    $pane->getTitle(),
                     sprintf(
                         'dashboard/rename-pane?home=%s&pane=%s',
                         $this->dashboard->getHomeById($pane->getParentId())->getName(),
@@ -117,21 +111,37 @@ class Settings extends BaseHtmlElement
                 ));
 
                 $tableRow->add($th);
-                $dashlets = array_filter(
-                    $pane->getDashlets(),
-                    function ($dashlet) {
-                        return ! $dashlet->getDisabled();
-                    }
-                );
+                if ($pane->getDisabled()) {
+                    $tableRow->add(new HtmlElement('td', null, new HtmlElement('div', [
+                        'class' => 'icinga-controls',
+                        'style' => 'text-align: right;'
+                    ], [
+                        new HtmlElement('input', [
+                            'type'      => 'checkbox',
+                            'name'      => 'submit',
+                            'disabled'  => 'disabled',
+                            'checked'   => 'checked'
+                        ]),
+                        new HtmlElement(
+                            'label',
+                            ['class'    => 'toggle-switch disabled'],
+                            new HtmlElement(
+                                'span',
+                                ['class'    => 'toggle-slider']
+                            )
+                        )
+                    ])));
+                }
 
-                if (empty($dashlets)) {
+                if (empty($pane->getDashlets())) {
                     $tableRow->add(new HtmlElement(
                         'tr',
                         null,
                         new HtmlElement('td', ['colspan' => '3'], t('No dashlets added to dashboard'))
                     ));
                 } else {
-                    foreach ($dashlets as $dashlet) {
+                    /** @var \Icinga\Web\Dashboard\Dashlet $dashlet */
+                    foreach ($pane->getDashlets() as $dashlet) {
                         $tr = new HtmlElement('tr', null, new HtmlElement(
                             'td',
                             null,

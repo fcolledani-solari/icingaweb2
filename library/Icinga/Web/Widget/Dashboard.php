@@ -821,7 +821,7 @@ class Dashboard extends BaseHtmlElement
         } else {
             $this->setAttribute('class', 'content');
             $format = t(
-                'Currently there is no dashboard available. This might change once you enabled some of the available %s.'
+                'Currently there is no pane available. This might change once you enabled some of the available %s.'
             );
 
             $dashlets = [
