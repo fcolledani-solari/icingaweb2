@@ -437,6 +437,8 @@ class Pane implements UserWidget
     public function setDisabled($disabled = true)
     {
         $this->disabled = (bool) $disabled;
+
+        return $this;
     }
 
     /**

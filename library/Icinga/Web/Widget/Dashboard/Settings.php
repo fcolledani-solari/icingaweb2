@@ -80,75 +80,94 @@ class Settings extends BaseHtmlElement
             $tbody->add($tableRow);
         }
 
-        foreach ($this->dashboard->getPanes() as $pane) {
-            if ($pane->getDisabled() || $pane->getParentId() !== $home->getAttribute('homeId')) {
-                continue;
+        $panes = array_filter(
+            $this->dashboard->getPanes(),
+            function ($pane) {
+                return ! $pane->getDisabled();
             }
+        );
 
-            $tableRow = new HtmlElement('tr', null);
-            $th = new HtmlElement('th', [
-                'colspan'   => '2',
-                'style'     => 'text-align: left; padding: 0.5em;'
-            ]);
-            if ($pane->isUserWidget()) {
-                $th->add(new Link(
-                    $pane->getName(),
-                    sprintf(
-                        'dashboard/rename-pane?home=%s&pane=%s',
-                        $this->dashboard->getHomeById($pane->getParentId())->getName(),
-                        $pane->getName()
-                    ),
-                    [
-                        'title' => sprintf(t('Edit pane %s'), $pane->getName())
-                    ]
-                ));
-            } else {
-                $th->add($pane->getName());
-            }
+        if (empty($panes)) {
+            $tbody->add(new HtmlElement(
+                'tr',
+                null,
+                new HtmlElement('td', ['colspan' => '3'], t('Currently there is no dashboards available.'))
+            ));
+        } else {
+            foreach ($panes as $pane) {
+                if ($pane->getParentId() !== $home->getAttribute('homeId')) {
+                    continue;
+                }
 
-            $tableRow->add($th);
-            if (empty($pane->getDashlets())) {
-                $tableRow->add(new HtmlElement(
-                    'tr',
-                    null,
-                    new HtmlElement('td', ['colspan' => '3'], t('No dashlets added to dashboard'))
-                ));
-            } else {
-                foreach ($pane->getDashlets() as $dashlet) {
-                    if ($dashlet->getDisabled()) {
-                        continue;
-                    }
-                    $tr = new HtmlElement('tr', null, new HtmlElement(
-                        'td',
-                        null,
-                        new Link(
-                            $dashlet->getTitle(),
-                            sprintf(
-                                'dashboard/update-dashlet?home=%s&pane=%s&dashlet=%s',
-                                $this->dashboard->getHomeById($pane->getParentId())->getName(),
-                                $pane->getName(),
-                                $dashlet->getName()
-                            ),
-                            [
-                                'title' => sprintf(t('Edit dashlet %s'), $dashlet->getTitle())
-                            ]
-                        )
+                $tableRow = new HtmlElement('tr', null);
+                $th = new HtmlElement('th', [
+                    'colspan'   => '2',
+                    'style'     => 'text-align: left; padding: 0.5em;'
+                ]);
+                if ($pane->isUserWidget()) {
+                    $th->add(new Link(
+                        $pane->getName(),
+                        sprintf(
+                            'dashboard/rename-pane?home=%s&pane=%s',
+                            $this->dashboard->getHomeById($pane->getParentId())->getName(),
+                            $pane->getName()
+                        ),
+                        [
+                            'title' => sprintf(t('Edit pane %s'), $pane->getName())
+                        ]
                     ));
-                    $tr->add(new HtmlElement('td', [
-                        'style' => ('
+                } else {
+                    $th->add($pane->getName());
+                }
+
+                $tableRow->add($th);
+                $dashlets = array_filter(
+                    $pane->getDashlets(),
+                    function ($dashlet) {
+                        return ! $dashlet->getDisabled();
+                    }
+                );
+
+                if (empty($dashlets)) {
+                    $tableRow->add(new HtmlElement(
+                        'tr',
+                        null,
+                        new HtmlElement('td', ['colspan' => '3'], t('No dashlets added to dashboard'))
+                    ));
+                } else {
+                    foreach ($dashlets as $dashlet) {
+                        $tr = new HtmlElement('tr', null, new HtmlElement(
+                            'td',
+                            null,
+                            new Link(
+                                $dashlet->getTitle(),
+                                sprintf(
+                                    'dashboard/update-dashlet?home=%s&pane=%s&dashlet=%s',
+                                    $this->dashboard->getHomeById($pane->getParentId())->getName(),
+                                    $pane->getName(),
+                                    $dashlet->getName()
+                                ),
+                                [
+                                    'title' => sprintf(t('Edit dashlet %s'), $dashlet->getTitle())
+                                ]
+                            )
+                        ));
+                        $tr->add(new HtmlElement('td', [
+                            'style' => ('
                                 table-layout: fixed; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
                             ')
-                    ], new Link(
-                        $dashlet->getUrl()->getRelativeUrl(),
-                        $dashlet->getUrl()->getRelativeUrl(),
-                        ['title' => sprintf(t('Show dashlet %s'), $dashlet->getTitle())]
-                    )));
+                        ], new Link(
+                            $dashlet->getUrl()->getRelativeUrl(),
+                            $dashlet->getUrl()->getRelativeUrl(),
+                            ['title' => sprintf(t('Show dashlet %s'), $dashlet->getTitle())]
+                        )));
 
-                    $tableRow->add($tr);
+                        $tableRow->add($tr);
+                    }
                 }
-            }
 
-            $tbody->add($tableRow);
+                $tbody->add($tableRow);
+            }
         }
 
         return $tbody;

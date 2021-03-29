@@ -138,7 +138,7 @@ class DashletForm extends CompatForm
                         'required'      => true,
                         'label'         => t('Dashboard Home'),
                         'multiOptions'  => $dashboardHomes,
-                        'description'   => t('Select a dashboard home you want to add the dashboard to'),
+                        'description'   => t('Select a home you want to add the pane to'),
                     ]
                 );
             }
@@ -286,9 +286,12 @@ class DashletForm extends CompatForm
     {
         $homes = $this->dashboard->getHomes();
         $db = $this->dashboard->getConn();
-        $orgParent = (int)$this->getValue('org_parentId');
 
-        if ($homes[Dashboard::DEFAULT_HOME]->getAttribute('homeId') === $orgParent) {
+        $orgParent = (int)$this->getValue('org_parentId');
+        $pane = $this->dashboard->getPane($this->getValue('org_pane'));
+        $dashlet = $pane->getDashlet($this->getValue('org_dashlet'));
+
+        if (! empty($dashlet->getGlobalUid())) {
             Notification::info(sprintf(
                 t('Default dashlet "%s" can\'t be edited'),
                 $this->getValue('org_dashlet')
@@ -310,14 +313,12 @@ class DashletForm extends CompatForm
             $newParent = $db->lastInsertId();
         }
 
-        $pane = $this->dashboard->getPane($this->getValue('org_pane'));
         if ($pane->getParentId() !== $orgParent) {
             $this->dashboard->loadUserDashboardsFromDatabase($orgParent);
             $pane = $this->dashboard->getPane($this->getValue('org_pane'));
         }
-        $pane->setTitle($this->getValue('pane'));
-        $paneId = $pane->getPaneId();
 
+        $paneId = $pane->getPaneId();
         $this->dashboard->loadUserDashboardsFromDatabase($newParent);
         if ($this->dashboard->hasPane($this->getValue('pane'))) {
             $newPane = $this->dashboard->getPane($this->getValue('pane'));
@@ -343,9 +344,6 @@ class DashletForm extends CompatForm
 
             $paneId = $db->lastInsertId();
         }
-
-        $dashlet = $pane->getDashlet($this->getValue('org_dashlet'));
-        $dashlet->setTitle($this->getValue('dashlet'));
 
         $db->update('dashlet', [
             'dashboard_id'  => $paneId,

@@ -17,6 +17,8 @@ use Icinga\Web\Url;
 use Icinga\Web\Dashboard\Dashlet;
 use Icinga\Web\Widget\Dashboard\Pane;
 use ipl\Html\BaseHtmlElement;
+use ipl\Html\HtmlElement;
+use ipl\Web\Widget\Link;
 use ipl\Web\Widget\Tabs;
 use ipl\Sql\Select;
 
@@ -295,14 +297,11 @@ class Dashboard extends BaseHtmlElement
             ->where(['home_id = ?' => $parentId]));
 
         foreach ($select as $dashboard) {
-            if ((bool)$dashboard->disabled) {
-                continue;
-            }
-
             $dashboards[$dashboard->name] = (new Pane($dashboard->name))
                 ->setPaneId($dashboard->id)
                 ->setParentId($dashboard->home_id)
                 ->setGlobalUid($dashboard->uid)
+                ->setDisabled($dashboard->disabled)
                 ->setTitle($dashboard->label);
 
             if ($dashboard->name !== self::DEFAULT_HOME) {
@@ -319,10 +318,6 @@ class Dashboard extends BaseHtmlElement
                 ], 'OR'));
 
             foreach ($newResults as $dashletData) {
-                if ((bool)$dashletData->disabled) {
-                    continue;
-                }
-
                 $dashlet = (new Dashlet(
                     $dashletData->label,
                     $dashletData->url,
@@ -330,7 +325,8 @@ class Dashboard extends BaseHtmlElement
                 ))
                     ->setName($dashletData->name)
                     ->setGlobalUid($dashletData->uid)
-                    ->setDashletId($dashletData->id);
+                    ->setDashletId($dashletData->id)
+                    ->setDisabled($dashletData->disabled);
 
                 if ($dashboard->name !== self::DEFAULT_HOME) {
                     $dashlet->setUserWidget();
@@ -600,7 +596,9 @@ class Dashboard extends BaseHtmlElement
             $parent = $this->homes[$home]->getAttribute('homeId');
             $this->removePanes($parent);
 
-            $this->getConn()->delete('dashboard_home', ['id = ?'    => $parent]);
+            if (self::DEFAULT_HOME !== $home) {
+                $this->getConn()->delete('dashboard_home', ['id = ?'    => $parent]);
+            }
         } else {
             throw new ProgrammingError('Home does not exist: ' . $home);
         }
@@ -735,7 +733,15 @@ class Dashboard extends BaseHtmlElement
             if ($this->getHomeById($parent)->getAttribute('homeId') === $default->getAttribute('homeId')) {
                 $this->getConn()->update('dashboard', [
                     'disabled'   => true
-                ], ['home_id = ?'   => $default]);
+                ], [
+                    'home_id = ?'   => $default->getAttribute('homeId'),
+                    'dashboard.uid IS NOT NULL'
+                ]);
+
+                $this->getConn()->delete('dashboard', [
+                    'home_id = ?'    => $default->getAttribute('homeId'),
+                    'dashboard.uid IS NULL'
+                ]);
             } else {
                 $this->getConn()->delete('dashboard', ['home_id = ?'    => $parent]);
             }
@@ -776,6 +782,10 @@ class Dashboard extends BaseHtmlElement
     {
         $list = array();
         foreach ($this->panes as $name => $pane) {
+            if ($pane->getDisabled()) {
+                continue;
+            }
+
             $list[$name] = $pane->getTitle();
         }
         return $list;
@@ -786,7 +796,32 @@ class Dashboard extends BaseHtmlElement
      */
     public function assemble()
     {
-        $this->add($this->determineActivePane()->getDashlets());
+        $panes = array_filter(
+            $this->panes,
+            function ($pane) {
+                return ! $pane->getDisabled();
+            }
+        );
+
+        if (! empty($panes)) {
+            $dashlets = array_filter(
+                $this->determineActivePane()->getDashlets(),
+                function ($dashlet) {
+                    return ! $dashlet->getDisabled();
+                }
+            );
+        } else {
+            $this->setAttribute('class', 'content');
+            $dashlets = [
+                new HtmlElement('h1', null, t('Welcome to Icinga Web!')),
+                sprintf(
+                    t('Currently there is no dashlet available. This might change once you enabled some of the available %s.'),
+                    new Link('modules', 'config/modules')
+                )
+            ];
+        }
+
+        $this->add($dashlets);
     }
 
     /**

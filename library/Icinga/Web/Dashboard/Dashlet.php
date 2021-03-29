@@ -174,6 +174,8 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     public function setDisabled($disabled)
     {
         $this->disabled = $disabled;
+
+        return $this;
     }
 
     /**
