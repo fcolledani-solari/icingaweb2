@@ -810,10 +810,18 @@ class Dashboard extends BaseHtmlElement
                     return ! $dashlet->getDisabled();
                 }
             );
+
+            if (empty($dashlets)) {
+                $this->setAttribute('class', 'content');
+                $message = t(
+                    'Currently there is no dashlet available. This might change once you created some new dashlets.'
+                );
+                $dashlets = new HtmlElement('h1', null, $message);
+            }
         } else {
             $this->setAttribute('class', 'content');
             $format = t(
-                'Currently there is no dashlet available. This might change once you enabled some of the available %s.'
+                'Currently there is no dashboard available. This might change once you enabled some of the available %s.'
             );
 
             $dashlets = [

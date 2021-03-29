@@ -91,7 +91,7 @@ class Settings extends BaseHtmlElement
             $tbody->add(new HtmlElement(
                 'tr',
                 null,
-                new HtmlElement('td', ['colspan' => '3'], t('Currently there is no dashboards available.'))
+                new HtmlElement('td', ['colspan' => '3'], t('Currently there is no dashboard available.'))
             ));
         } else {
             foreach ($panes as $pane) {
