@@ -163,7 +163,8 @@ class HomeAndPaneForm extends CompatForm
                     if ($this->getPopulatedValue('enable_pane') === 'n') {
                         $this->dashboard->getConn()->update('dashboard', [
                             'disabled'  => (int)false
-                        ], ['id = ?'    => $pane->getPaneId()]);                    }
+                        ], ['id = ?'    => $pane->getPaneId()]);
+                    }
 
                     Notification::info(sprintf(t('Default pane "%s" can\'t be edited.'), $paneName));
                     return;
