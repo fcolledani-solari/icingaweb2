@@ -131,6 +131,9 @@ class Settings extends BaseHtmlElement
                             )
                         )
                     ])));
+
+                    $tbody->add($tableRow);
+                    continue;
                 }
 
                 if (empty($pane->getDashlets())) {
@@ -167,6 +170,28 @@ class Settings extends BaseHtmlElement
                             $dashlet->getUrl()->getRelativeUrl(),
                             ['title' => sprintf(t('Show dashlet %s'), $dashlet->getTitle())]
                         )));
+
+                        if ($dashlet->getDisabled()) {
+                            $tr->add(new HtmlElement('td', null, new HtmlElement('div', [
+                                'class' => 'icinga-controls',
+                                'style' => 'text-align: right;'
+                            ], [
+                                new HtmlElement('input', [
+                                    'type'      => 'checkbox',
+                                    'name'      => 'submit',
+                                    'disabled'  => 'disabled',
+                                    'checked'   => 'checked'
+                                ]),
+                                new HtmlElement(
+                                    'label',
+                                    ['class'    => 'toggle-switch disabled'],
+                                    new HtmlElement(
+                                        'span',
+                                        ['class'    => 'toggle-slider']
+                                    )
+                                )
+                            ])));
+                        }
 
                         $tableRow->add($tr);
                     }

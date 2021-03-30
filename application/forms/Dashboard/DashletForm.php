@@ -182,6 +182,21 @@ class DashletForm extends CompatForm
             }
 
             $this->add(new HtmlElement('hr'));
+            if (Url::fromRequest()->getPath() === 'dashboard/update-dashlet') {
+                $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
+                $dashlet = $pane->getDashlet(Url::fromRequest()->getParam('dashlet'));
+                if ($dashlet->getDisabled()) {
+                    $this->addElement(
+                        'checkbox',
+                        'enable_dashlet',
+                        [
+                            'label'         => t('Enable Dashlet'),
+                            'value'         => 'y',
+                            'description'   => t('Uncheck this checkbox if you want to enable this pane.')
+                        ]
+                    );
+                }
+            }
             $this->addElement(
                 'textarea',
                 'url',
@@ -292,11 +307,13 @@ class DashletForm extends CompatForm
         $dashlet = $pane->getDashlet($this->getValue('org_dashlet'));
 
         if (! empty($dashlet->getGlobalUid())) {
-            Notification::info(sprintf(
-                t('Default dashlet "%s" can\'t be edited'),
-                $this->getValue('org_dashlet')
-            ));
+            if ($this->getPopulatedValue('enable_dashlet') === 'n') {
+                $db->update('dashlet', [
+                    'disabled'  => (int)false
+                ], ['id = ?'    => $dashlet->getDashletId()]);
+            }
 
+            Notification::info(sprintf(t('Default dashlet "%s" can\'t be edited'), $dashlet->getTitle()));
             return;
         }
 
