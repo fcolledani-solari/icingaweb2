@@ -126,11 +126,11 @@ class DashboardsController extends CompatController
 
     public function renameHomeAction()
     {
-        $this->dashboard->getTabs()->add('rename-home', [
+        $this->getTabs()->add('rename-home', [
             'active'    => true,
             'title'     => $this->translate('Update Home'),
             'url'       => Url::fromRequest()
-        ]);
+        ])->disableLegacyExtensions();
 
         if (! $this->getParam('home')) {
             throw new \Zend_Controller_Action_Exception(
@@ -154,11 +154,11 @@ class DashboardsController extends CompatController
 
     public function removeHomeAction()
     {
-        $this->dashboard->getTabs()->add('remove-home', array(
+        $this->getTabs()->add('remove-home', array(
             'active'    => true,
             'label'     => $this->translate('Remove Home'),
             'url'       => Url::fromRequest()
-        ));
+        ))->disableLegacyExtensions();
 
         if (! $this->getParam('home')) {
             throw new \Zend_Controller_Action_Exception(
@@ -197,11 +197,11 @@ class DashboardsController extends CompatController
 
     public function renamePaneAction()
     {
-        $this->dashboard->getTabs()->add('update-pane', [
+        $this->getTabs()->add('update-pane', [
             'active'    => true,
             'title'     => $this->translate('Update Pane'),
             'url'       => Url::fromRequest()
-        ]);
+        ])->disableLegacyExtensions();
 
         $home = $this->getParam('home');
         if (! array_key_exists($home, $this->dashboard->getHomes())) {
@@ -227,11 +227,11 @@ class DashboardsController extends CompatController
 
     public function removePaneAction()
     {
-        $this->dashboard->getTabs()->add('remove-pane', array(
+        $this->getTabs()->add('remove-pane', array(
             'active'    => true,
             'label'     => $this->translate('Remove Pane'),
             'url'       => Url::fromRequest()
-        ));
+        ))->disableLegacyExtensions();
 
         $home = $this->getParam('home');
         if (! array_key_exists($home, $this->dashboard->getHomes())) {
@@ -257,11 +257,11 @@ class DashboardsController extends CompatController
 
     public function newDashletAction()
     {
-        $this->dashboard->getTabs()->add('new-dashlet', array(
+        $this->getTabs()->add('new-dashlet', array(
             'active'    => true,
             'label'     => $this->translate('New Dashlet'),
             'url'       => Url::fromRequest()
-        ));
+        ))->disableLegacyExtensions();
 
         $dashletForm = new DashletForm($this->dashboard);
         $dashletForm->on(DashletForm::ON_SUCCESS, function () use ($dashletForm) {
@@ -282,11 +282,11 @@ class DashboardsController extends CompatController
 
     public function updateDashletAction()
     {
-        $this->dashboard->getTabs()->add('update-dashlet', array(
+        $this->getTabs()->add('update-dashlet', array(
             'active'    => true,
             'label'     => $this->translate('Update Dashlet'),
             'url'       => Url::fromRequest()
-        ));
+        ))->disableLegacyExtensions();
 
         $this->isMissingSomething();
 
@@ -306,11 +306,11 @@ class DashboardsController extends CompatController
 
     public function removeDashletAction()
     {
-        $this->dashboard->getTabs()->add('remove-dashlet', array(
+        $this->getTabs()->add('remove-dashlet', array(
             'active'    => true,
             'label'     => $this->translate('Remove Dashlet'),
             'url'       => Url::fromRequest()
-        ));
+        ))->disableLegacyExtensions();
 
         $this->isMissingSomething();
         $dashletForm = (new DashletForm($this->dashboard))
