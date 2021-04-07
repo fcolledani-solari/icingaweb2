@@ -267,7 +267,7 @@ class DashboardsController extends CompatController
         $dashletForm->on(DashletForm::ON_SUCCESS, function () use ($dashletForm) {
             $this->redirectNow(Url::fromPath('dashboard/home')->addParams([
                 'home'  => $dashletForm->getValue('home'),
-                'pane'  => $dashletForm->getValue('pane'),
+                'pane'  => $dashletForm->paneName,
             ]));
         })->handleRequest(ServerRequest::fromGlobals());
 
@@ -344,7 +344,7 @@ class DashboardsController extends CompatController
             $urlParam = ['home' => $this->getParam('home')];
         } else {
             $home = $this->dashboard->rewindHomes();
-            $urlParam = ['home' => !$home ?: $home->getName()];
+            $urlParam = ['home' => ! $home ?: $home->getName()];
         }
 
         $this->controls->setTabs($this->dashboard->getTabs($defaultPanes)->extend(new DashboardSettings($urlParam)));

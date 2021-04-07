@@ -23,6 +23,8 @@ class DashletForm extends CompatForm
     /** @var array dashboard pane items name=>title */
     private $panes = [];
 
+    public $paneName;
+
     /**
      * DashletForm constructor.
      *
@@ -268,12 +270,12 @@ class DashletForm extends CompatForm
         }
 
         try {
-            $name = $this->getValue('pane');
-            if (in_array($name, $this->panes)) {
-                $name = array_search($name, $this->panes);
+            $this->paneName = $this->getValue('pane');
+            if (in_array($this->paneName, $this->panes)) {
+                $this->paneName = array_search($this->paneName, $this->panes);
             }
 
-            $pane = $this->dashboard->getPane($name);
+            $pane = $this->dashboard->getPane($this->paneName);
             $paneId = $pane->getPaneId();
         } catch (ProgrammingError $e) {
             $db->insert('dashboard', [
@@ -283,14 +285,19 @@ class DashletForm extends CompatForm
             ]);
 
             $paneId = $db->lastInsertId();
+            $pane = null;
         }
 
         try {
-            $dashlet = array_filter($pane->getDashlets(), function ($dashlet) {
-                if ($dashlet->getName() === $this->getValue('dashlet')) {
-                    return $dashlet;
-                }
-            });
+            if (! empty($pane)) {
+                $dashlet = array_filter($pane->getDashlets(), function ($dashlet) {
+                    if ($dashlet->getName() === $this->getValue('dashlet')) {
+                        return $dashlet;
+                    }
+                });
+            } else {
+                $dashlet = null;
+            }
 
             if (empty($dashlet)) {
                 throw new ProgrammingError('Dashlet does not exist.');
