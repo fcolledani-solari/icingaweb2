@@ -74,9 +74,9 @@ class Dashboard extends BaseHtmlElement
     /**
      * The parameter that will be added to identify panes
      *
-     * @var string
+     * @var array
      */
-    private $tabParam = 'pane';
+    private $tabParam = ['home', 'pane'];
 
     /**
      * Dashboard home NavigationItems of the main menu item „dashboard“
@@ -279,7 +279,7 @@ class Dashboard extends BaseHtmlElement
     public function loadUserDashboardsFromDatabase($parentId = 0)
     {
         $this->panes = [];
-        $dashboards = array();
+        $dashboards = [];
 
         if (Url::fromRequest()->getParam('home')) {
             if ($parentId === 0) {
@@ -304,7 +304,7 @@ class Dashboard extends BaseHtmlElement
                 ->setDisabled($dashboard->disabled)
                 ->setTitle($dashboard->label);
 
-            if ($this->getHomeById($parentId)->getName() !== self::DEFAULT_HOME) {
+            if (empty($dashboard->uid)) {
                 $dashboards[$dashboard->name]->setUserWidget();
             }
 
@@ -328,7 +328,7 @@ class Dashboard extends BaseHtmlElement
                     ->setDashletId($dashletData->id)
                     ->setDisabled($dashletData->disabled);
 
-                if ($this->getHomeById($parentId)->getName() !== self::DEFAULT_HOME) {
+                if (empty($dashletData->uid)) {
                     $dashlet->setUserWidget();
                 }
 
@@ -482,7 +482,12 @@ class Dashboard extends BaseHtmlElement
      */
     public function getTabs($defaultPane = false)
     {
-        $url = Url::fromPath('dashboard')->getUrlWithout($this->tabParam);
+        if (Url::fromRequest()->hasParam('home')) {
+            $url = Url::fromPath('dashboard/home')->getUrlWithout($this->tabParam);
+        } else {
+            $url = Url::fromPath('dashboard')->getUrlWithout($this->tabParam);
+        }
+
         if ($this->tabs === null) {
             $this->tabs = new Tabs();
             $this->tabs->disableLegacyExtensions();
@@ -491,15 +496,11 @@ class Dashboard extends BaseHtmlElement
                 if ($pane->getDisabled()) {
                     continue;
                 }
+
                 if (Url::fromRequest()->hasParam('home')) {
-                    try {
-                        $url = Url::fromPath('dashboard/home')->addParams([
-                            'home'   => $this->getHomeById($pane->getParentId())->getName(),
-                        ]);
-                    } catch (ProgrammingError $e) {
-                        $url = Url::fromPath('dashboard/home');
-                    }
+                    $url->addParams([$this->tabParam[0]  => $this->getHomeById($pane->getParentId())->getName()]);
                 }
+
                 $this->tabs->add(
                     $key,
                     [
@@ -509,7 +510,7 @@ class Dashboard extends BaseHtmlElement
                         ),
                         'label'     => $pane->getTitle(),
                         'url'       => clone($url),
-                        'urlParams' => [$this->tabParam => $key]
+                        'urlParams' => [$this->tabParam[1] => $key]
                     ]
                 );
             }
@@ -613,7 +614,7 @@ class Dashboard extends BaseHtmlElement
      */
     public function getHomeKeyNameArray()
     {
-        $list = array();
+        $list = [];
         foreach ($this->homes as $name => $home) {
             $list[$name] = $home->getName();
         }
@@ -780,7 +781,7 @@ class Dashboard extends BaseHtmlElement
      */
     public function getPaneKeyTitleArray()
     {
-        $list = array();
+        $list = [];
         foreach ($this->panes as $name => $pane) {
             if ($pane->getDisabled()) {
                 continue;
@@ -875,7 +876,7 @@ class Dashboard extends BaseHtmlElement
     {
         $active = $this->getTabs()->getActiveTab();
         if (! $active) {
-            if ($active = Url::fromRequest()->getParam($this->tabParam)) {
+            if ($active = Url::fromRequest()->getParam($this->tabParam[1])) {
                 if ($this->hasPane($active)) {
                     $this->activate($active);
                 } else {

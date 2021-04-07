@@ -268,14 +268,13 @@ class DashletForm extends CompatForm
         }
 
         try {
-            $pane = $this->dashboard->getPane($this->getValue('pane'));
-            $paneId = $pane->getPaneId();
-
-            // If the selected $pane->name should exist in another dashboard home we have to raise
-            // an exception so that the new pane with the same name can be created in another home.
-            if ($pane->getParentId() !== (int)$newParent) {
-                throw new ProgrammingError('Pane parent id does not match with the selected value of home id.');
+            $name = $this->getValue('pane');
+            if (in_array($name, $this->panes)) {
+                $name = array_search($name, $this->panes);
             }
+
+            $pane = $this->dashboard->getPane($name);
+            $paneId = $pane->getPaneId();
         } catch (ProgrammingError $e) {
             $db->insert('dashboard', [
                 'home_id'   => $newParent,
@@ -286,15 +285,29 @@ class DashletForm extends CompatForm
             $paneId = $db->lastInsertId();
         }
 
-        $db->insert('dashlet', [
-            'dashboard_id'  => $paneId,
-            'owner'         => $this->dashboard->getUser()->getUsername(),
-            'name'          => $this->getValue('dashlet'),
-            'label'         => $this->getValue('dashlet'),
-            'url'           => $this->getValue('url')
-        ]);
+        try {
+            $dashlet = array_filter($pane->getDashlets(), function ($dashlet) {
+                if ($dashlet->getName() === $this->getValue('dashlet')) {
+                    return $dashlet;
+                }
+            });
 
-        Notification::success(t('Dashlet created'));
+            if (empty($dashlet)) {
+                throw new ProgrammingError('Dashlet does not exist.');
+            }
+
+            Notification::info(t('There already exists a Dashlet with the same name.'));
+        } catch (ProgrammingError $err) {
+            $db->insert('dashlet', [
+                'dashboard_id'  => $paneId,
+                'owner'         => $this->dashboard->getUser()->getUsername(),
+                'name'          => $this->getValue('dashlet'),
+                'label'         => $this->getValue('dashlet'),
+                'url'           => $this->getValue('url')
+            ]);
+
+            Notification::success(t('Dashlet created'));
+        }
     }
 
     public function updateDashlet()
