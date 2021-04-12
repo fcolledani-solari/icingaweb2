@@ -366,10 +366,9 @@ class Module
             $dashlets = [];
             foreach ($pane->getDashlets() as $dashletName => $dashletConfig) {
                 $dashlets[$dashletName] = [
-                    'label'         => $this->translate($dashletName),
-                    'url'           => $dashletConfig['url'],
-                    'priority'      => $dashletConfig['priority'],
-                    'attributes'    => $dashletConfig['properties']
+                    'label'     => $this->translate($dashletName),
+                    'url'       => $dashletConfig['url'],
+                    'priority'  => $dashletConfig['priority']
                 ];
             }
 
@@ -402,6 +401,7 @@ class Module
         if (array_key_exists($name, $this->paneItems)) {
             $this->paneItems[$name]->setProperties($properties);
         } else {
+            $properties += ['module' => $this->getName()];
             $this->paneItems[$name] = new DashboardContainer($name, $properties);
         }
 

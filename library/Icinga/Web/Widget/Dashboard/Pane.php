@@ -66,13 +66,6 @@ class Pane implements UserWidget
     private $paneId;
 
     /**
-     * Unique pane identifier for global panes.
-     *
-     * @var string
-     */
-    private $globalUid;
-
-    /**
      * Create a new pane
      *
      * @param string $name         The pane to create
@@ -123,30 +116,6 @@ class Pane implements UserWidget
     public function getPaneId()
     {
         return $this->paneId;
-    }
-
-    /**
-     * Set the global unique id of this pane
-     *
-     * @param string $uid
-     *
-     * @return $this
-     */
-    public function setGlobalUid($uid)
-    {
-        $this->globalUid = $uid;
-
-        return $this;
-    }
-
-    /**
-     * Get the global unique id of this pane
-     *
-     * @return string
-     */
-    public function getGlobalUid()
-    {
-        return $this->globalUid;
     }
 
     /**
@@ -227,7 +196,7 @@ class Pane implements UserWidget
     {
         /** @var Dashlet $dashlet */
         foreach ($this->dashlets as $dashlet) {
-            if ($dashlet->getGlobalUid() === $uid) {
+            if ($dashlet->getDashletId() === $uid) {
                 return $dashlet;
             }
         }
