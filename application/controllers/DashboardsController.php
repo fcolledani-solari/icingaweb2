@@ -37,12 +37,9 @@ class DashboardsController extends CompatController
         if (! $this->dashboard->hasPanes()) {
             $this->setTitle('Dashboard');
         } else {
-            $panes = array_filter(
-                $this->dashboard->getPanes(),
-                function ($pane) {
-                    return ! $pane->getDisabled();
-                }
-            );
+            $panes = array_filter($this->dashboard->getPanes(), function ($pane) {
+                return ! $pane->getDisabled();
+            });
 
             if (empty($panes)) {
                 $this->setTitle('Dashboard');
@@ -99,12 +96,9 @@ class DashboardsController extends CompatController
         } else {
             $this->createTabs(true);
 
-            $panes = array_filter(
-                $this->dashboard->getPanes(),
-                function ($pane) {
-                    return ! $pane->getDisabled();
-                }
-            );
+            $panes = array_filter($this->dashboard->getPanes(), function ($pane) {
+                return ! $pane->getDisabled();
+            });
 
             if (empty($panes)) {
                 $this->setTitle($this->getParam('home'));

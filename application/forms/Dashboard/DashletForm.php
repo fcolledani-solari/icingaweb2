@@ -194,7 +194,7 @@ class DashletForm extends CompatForm
                         [
                             'label'         => t('Enable Dashlet'),
                             'value'         => 'y',
-                            'description'   => t('Uncheck this checkbox if you want to enable this pane.')
+                            'description'   => t('Uncheck this checkbox if you want to enable this dashlet.')
                         ]
                     );
                 }

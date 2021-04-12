@@ -703,16 +703,16 @@ class Dashboard extends BaseHtmlElement
     /**
      * Remove a specific pane from this dashboard
      *
-     * @param $title
+     * @param  $name
      *
      * @return $this
      *
      * @throws ProgrammingError
      */
-    public function removePane($title)
+    public function removePane($name)
     {
-        if ($this->hasPane($title) === true) {
-            $pane = $this->getPane($title);
+        if ($this->hasPane($name) === true) {
+            $pane = $this->getPane($name);
             if ($pane->isUserWidget() === true) {
                 $this->getConn()->delete('dashboard', ['id = ?' => $pane->getPaneId()]);
             } else {
@@ -721,12 +721,15 @@ class Dashboard extends BaseHtmlElement
                 ], ['id = ?'    => $pane->getPaneId()]);
             }
         } else {
-            throw new ProgrammingError('Pane not found: ' . $title);
+            throw new ProgrammingError('Pane not found: ' . $name);
         }
 
         return $this;
     }
 
+    /**
+     * @throws ProgrammingError
+     */
     public function removePanes($parent, $panes = [])
     {
         if (empty($panes)) {
@@ -797,27 +800,18 @@ class Dashboard extends BaseHtmlElement
      */
     public function assemble()
     {
-        $panes = array_filter(
-            $this->panes,
-            function ($pane) {
-                return ! $pane->getDisabled();
-            }
-        );
+        $panes = array_filter($this->panes, function ($pane) {
+            return ! $pane->getDisabled();
+        });
 
         if (! empty($panes)) {
-            $dashlets = array_filter(
-                $this->determineActivePane()->getDashlets(),
-                function ($dashlet) {
-                    return ! $dashlet->getDisabled();
-                }
-            );
+            $dashlets = array_filter($this->determineActivePane()->getDashlets(), function ($dashlet) {
+                return ! $dashlet->getDisabled();
+            });
 
             if (empty($dashlets)) {
                 $this->setAttribute('class', 'content');
-                $message = t(
-                    'Currently there is no dashlet available. This might change once you created some new dashlets.'
-                );
-                $dashlets = new HtmlElement('h1', null, $message);
+                $dashlets = new HtmlElement('h1', null, 'No dashlet added to this pane.');
             }
         } else {
             $this->setAttribute('class', 'content');
@@ -944,13 +938,13 @@ class Dashboard extends BaseHtmlElement
     /**
      * Sets the position of the specified key of array element as the first
      *
-     * element of the specified array list e.g $arr ['two' => 2, 'one' => 1]
+     * element of the list e.g $arr ['two' => 2, 'one' => 1]
      *
      * is going to be $arr ['one' => 1, 'two' => 2]
      *
-     * @param array $list
+     * @param  array $list
      *
-     * @param $key
+     * @param  $key
      *
      * @return array
      */
