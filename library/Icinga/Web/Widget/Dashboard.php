@@ -408,8 +408,9 @@ class Dashboard extends BaseHtmlElement
                             'id = ?'            => $pane->getDashlet($dashletName)->getDashletId()
                         ]);
                     } else {
+                        $id = $this->getSHA1($this->user->getUsername() . $pane->getName() . $dashletName);
                         $db->insert('dashlet', [
-                            'id'            => $this->getSHA1($this->user->getUsername() . $pane->getName() . $dashletName),
+                            'id'            => $id,
                             'dashboard_id'  => $pane->getPaneId(),
                             'owner'         => $this->user->getUsername(),
                             'name'          => $dashletName,
