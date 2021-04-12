@@ -17,9 +17,9 @@ class HomeAndPaneForm extends CompatForm
     /**
      * RenamePaneForm constructor.
      *
-     * @param $dashboard
+     * @param Dashboard $dashboard
      */
-    public function __construct($dashboard)
+    public function __construct(Dashboard $dashboard)
     {
         $this->dashboard = $dashboard;
     }

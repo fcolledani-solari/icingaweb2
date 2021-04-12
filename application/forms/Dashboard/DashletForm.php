@@ -30,7 +30,7 @@ class DashletForm extends CompatForm
      *
      * @param Dashboard $dashboard
      */
-    public function __construct($dashboard)
+    public function __construct(Dashboard $dashboard)
     {
         $this->setDashboard($dashboard);
     }
