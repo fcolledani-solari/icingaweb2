@@ -338,7 +338,18 @@ class DashletForm extends CompatForm
 
         // Original pane and dashlet
         $orgPane = $this->dashboard->getPane($this->getValue('org_pane'));
-        $orgDashlet = $orgPane->getDashlet($this->getValue('org_dashlet'));
+
+        try {
+            // If the original dashlet cannot be found, it is due to the reason
+            // that it is not stored in the DB and therefore it is a system dashlet.
+            $orgDashlet = $orgPane->getDashlet($this->getValue('org_dashlet'));
+        } catch (ProgrammingError $err) {
+            Notification::warning(
+                sprintf(t('It is not permitted to move system dashlet: %s'), $this->getValue('org_dashlet'))
+            );
+
+            return;
+        }
 
         $homeName = $this->getValue('home');
         if (Url::fromRequest()->getParam('home') === $homeName) {
@@ -389,15 +400,6 @@ class DashletForm extends CompatForm
 
             $dashletUpdated = false;
             if (! $orgDashlet->isUserWidget()) {
-                if ($defaultHome->getName() !== $this->getValue('home')) {
-                    Notification::warning(sprintf(
-                        t('It is not permitted to move system dashlet: %s'),
-                        $orgDashlet->getTitle()
-                    ));
-
-                    return;
-                }
-
                 $dashletUpdated = true;
                 $db->insert('dashlet_override', [
                     'dashlet_id'    => $orgDashlet->getDashletId(),

@@ -117,7 +117,7 @@ class Dashboard extends BaseHtmlElement
     public function load()
     {
         $this->loadHomeItems();
-        $this->loadGlobalDashboards();
+        $this->loadSystemDashboards();
         $this->loadUserDashboards();
         return $this;
     }
@@ -171,21 +171,12 @@ class Dashboard extends BaseHtmlElement
     }
 
     /**
-     * Load global dashboards provided by all enabled modules
+     * Load system dashboards provided by all enabled modules
      *
      * with the dashboard() method and store them in the DB
      */
-    protected function loadGlobalDashboards()
+    protected function loadSystemDashboards()
     {
-        if (Url::fromRequest()->hasParam('home')) {
-            $home = Url::fromRequest()->getParam('home');
-            // If the home param being loaded does not match the default home
-            // we do not need to load anything
-            if ($home !== self::DEFAULT_HOME) {
-                return false;
-            }
-        }
-
         $db = $this->getConn();
         $navigation = new Navigation();
         $navigation->load('dashboard-pane');
@@ -209,6 +200,16 @@ class Dashboard extends BaseHtmlElement
                 ->setTitle($dashboardPane->getLabel())
                 ->setParentId($parent)
                 ->setPaneId($paneId);
+
+            if (! $this->hasHomeThisPane($parent, $pane->getName())) {
+                $this->getConn()->insert('dashboard', [
+                    'id'        => $pane->getPaneId(),
+                    'home_id'   => $parent,
+                    'name'      => $pane->getName(),
+                    'label'     => $pane->getTitle(),
+                    'disabled'  => (int)$pane->getDisabled()
+                ]);
+            }
 
             /** @var NavigationItem $dashlet */
             foreach ($dashboardPane->getChildren() as $dashlet) {
@@ -371,7 +372,9 @@ class Dashboard extends BaseHtmlElement
             if (strpos($key, '.') === false) {
                 $paneId = $this->getSHA1(self::DEFAULT_HOME . $key);
                 if (! array_key_exists($key, $panes)) {
-                    if (! $this->hasHomeThisPane($homeId, $paneId)) {
+                    if ($pane = $this->hasHomeThisPane($homeId, $key)) {
+                        $paneId = $pane->id;
+                    } else {
                         $this->getConn()->insert('dashboard', [
                             'id'        => $paneId,
                             'home_id'   => $homeId,
@@ -412,22 +415,22 @@ class Dashboard extends BaseHtmlElement
                             ->where(['id = ?' => $dashletId, 'dashboard_id = ?' => $pane->getPaneId()]);
 
                         $result = $this->getConn()->select($select)->fetch();
-                        if (! $result) {
-                            $db->insert('dashlet', [
-                                'id'            => $dashletId,
-                                'dashboard_id'  => $pane->getPaneId(),
-                                'owner'         => $this->user->getUsername(),
-                                'name'          => $dashletName,
-                                'label'         => $part->get('title', $dashletName),
-                                'url'           => $part->get('url'),
-                            ]);
-                        }
-
                         $dashlet = (new Dashlet($part->get('title', $dashletName), $part->get('url'), $pane))
                             ->setName($dashletName)
                             ->setDashletId($dashletId)
                             ->setDisabled($part->get('disabled', false))
                             ->setUserWidget();
+
+                        if (! $result) {
+                            $db->insert('dashlet', [
+                                'id'            => $dashlet->getDashletId(),
+                                'dashboard_id'  => $pane->getPaneId(),
+                                'owner'         => $this->user->getUsername(),
+                                'name'          => $dashlet->getName(),
+                                'label'         => $dashlet->getTitle(),
+                                'url'           => $dashlet->getUrl(),
+                            ]);
+                        }
 
                         $pane->addDashlet($dashlet);
                     }
@@ -721,16 +724,16 @@ class Dashboard extends BaseHtmlElement
      *
      * @param  $homeId
      *
-     * @param  $paneId
+     * @param  $pane
      *
      * @return mixed
      */
-    public function hasHomeThisPane($homeId, $paneId)
+    public function hasHomeThisPane($homeId, $pane)
     {
         $select = (new Select())
             ->columns('*')
             ->from('dashboard')
-            ->where(['id = ?' => $paneId, 'home_id = ?' => $homeId]);
+            ->where(['name = ?' => $pane, 'home_id = ?' => $homeId]);
 
         return $this->getConn()->select($select)->fetch();
     }
