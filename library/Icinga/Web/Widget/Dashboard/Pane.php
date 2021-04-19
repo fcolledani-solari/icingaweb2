@@ -59,6 +59,8 @@ class Pane implements UserWidget
      */
     private $disabled = false;
 
+    private $override = false;
+
     /**
      * Dashboard home id if the current pane is loaded from DB
      *
@@ -429,7 +431,7 @@ class Pane implements UserWidget
      */
     public function setDisabled($disabled)
     {
-        $this->disabled = (bool) $disabled;
+        $this->disabled = (bool)$disabled;
 
         return $this;
     }
@@ -442,6 +444,23 @@ class Pane implements UserWidget
     public function getDisabled()
     {
         return $this->disabled;
+    }
+
+    /**
+     * @param  boolean $value
+     *
+     * @return $this
+     */
+    public function setOverride($value)
+    {
+        $this->override = (bool)$value;
+
+        return $this;
+    }
+
+    public function isOverriden()
+    {
+        return $this->override;
     }
 
     public function setUserWidget($userWidget = true)

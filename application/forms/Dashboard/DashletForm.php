@@ -125,7 +125,7 @@ class DashletForm extends CompatForm
                     [
                         'required'      => true,
                         'label'         => t('Dashboard Home'),
-                        'description'   => t('Enter a title for the new dashboard'),
+                        'description'   => t('Enter a title for the new dashboard home.'),
                     ]
                 );
             } else {
@@ -185,7 +185,7 @@ class DashletForm extends CompatForm
 
             $this->add(new HtmlElement('hr'));
             if (Url::fromRequest()->getPath() === 'dashboard/update-dashlet') {
-                if (Url::fromRequest()->getParam('home') === $this->getValue('home')) {
+                if ($home === $this->getPopulatedValue('home', reset($dashboardHomes))) {
                     $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
                     $dashlet = $pane->getDashlet(Url::fromRequest()->getParam('dashlet'));
 
@@ -260,9 +260,11 @@ class DashletForm extends CompatForm
     public function createDashlet()
     {
         $db = $this->dashboard->getConn();
-        if (! array_key_exists($this->getValue('home'), $this->dashboard->getHomes())) {
+        $home = $this->getValue('home');
+
+        if (! array_key_exists($home, $this->dashboard->getHomes())) {
             $db->insert('dashboard_home', [
-                'name'  => $this->getValue('home'),
+                'name'  => $home,
                 'owner' => $this->dashboard->getUser()->getUsername()
             ]);
 
@@ -284,7 +286,7 @@ class DashletForm extends CompatForm
         } catch (ProgrammingError $e) {
             $pane = null;
             $paneName = $this->getValue('pane');
-            $paneId = $this->dashboard->getSHA1($this->getValue('home') . $paneName);
+            $paneId = $this->dashboard->getSHA1($this->dashboard->getUser()->getUsername() . $home . $paneName);
 
             $db->insert('dashboard', [
                 'id'        => $paneId,
@@ -313,7 +315,7 @@ class DashletForm extends CompatForm
             Notification::warning(t('There already exists a Dashlet with the same name.'));
         } catch (ProgrammingError $err) {
             $dashletId = $this->dashboard->getSHA1(
-                $this->getValue('home') . $this->getValue('pane') . $this->getValue('dashlet')
+                $this->dashboard->getUser()->getUsername() . $home . $this->paneName . $this->getValue('dashlet')
             );
             $db->insert('dashlet', [
                 'id'            => $dashletId,
@@ -372,7 +374,9 @@ class DashletForm extends CompatForm
 
             $db->update('dashboard', ['home_id' => $homeId], ['id = ?' => $newPane->getPaneId()]);
         } else {
-            $paneId = $this->dashboard->getSHA1($this->getValue('home') . $this->getValue('pane'));
+            $paneId = $this->dashboard->getSHA1(
+                $this->dashboard->getUser()->getUsername() . $homeName . $this->getValue('pane')
+            );
             $db->insert('dashboard', [
                 'id'        => $paneId,
                 'home_id'   => $homeId,

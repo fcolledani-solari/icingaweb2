@@ -49,16 +49,57 @@ class HomeAndPaneForm extends CompatForm
             $dashboardHomes = $this->dashboard->changeElementPos($dashboardHomes, $home);
         }
 
-        $description    = t('Edit the current home name');
+        $dbTarget = '_main';
+        $description = t('Edit the current home name');
         $btnUpdateLabel = t('Update Home');
         $btnRemoveLabel = t('Remove Home');
-        $formaction     = (string)Url::fromRequest()->setPath($removeHome);
+        $formaction = (string)Url::fromRequest()->setPath($removeHome);
 
         if ($renamePane === Url::fromRequest()->getPath()) {
-            $description    = t('Edit the current pane name');
+            $dbTarget = '_self';
+            $description = t('Edit the current pane name');
             $btnUpdateLabel = t('Update Pane');
             $btnRemoveLabel = t('Remove Pane');
-            $formaction     = (string)Url::fromRequest()->setPath($removePane);
+            $formaction = (string)Url::fromRequest()->setPath($removePane);
+
+            $this->addElement('hidden', 'org_title', ['required' => false]);
+            $this->addElement(
+                'checkbox',
+                'create_new_home',
+                [
+                    'class'         => 'autosubmit',
+                    'disabled'      => empty($dashboardHomes) ?: null,
+                    'required'      => false,
+                    'label'         => t('New Dashboard Home'),
+                    'description'   => t('Check this box if you want to move the pane to a new dashboard home.'),
+                ]
+            );
+
+            if (empty($dashboardHomes) || $this->getPopulatedValue('create_new_home') === 'y') {
+                if (empty($dashboardHomes)) {
+                    $this->getElement('create_new_home')->addAttributes(['checked' => 'checked']);
+                }
+                $this->addElement(
+                    'text',
+                    'home',
+                    [
+                        'required'      => true,
+                        'label'         => t('Dashboard Home'),
+                        'description'   => t('Enter a title for the new dashboard home.'),
+                    ]
+                );
+            } else {
+                $this->addElement(
+                    'select',
+                    'home',
+                    [
+                        'required'      => true,
+                        'label'         => t('Move to home'),
+                        'multiOptions'  => $dashboardHomes,
+                        'description'   => t('Select a dashboard home you want to move the dashboard to'),
+                    ]
+                );
+            }
 
             $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
             if ($pane->getDisabled()) {
@@ -72,17 +113,6 @@ class HomeAndPaneForm extends CompatForm
                     ]
                 );
             }
-
-            $this->addElement(
-                'select',
-                'home',
-                [
-                    'required'      => true,
-                    'label'         => t('Move to home'),
-                    'multiOptions'  => $dashboardHomes,
-                    'description'   => t('Select a dashboard home you want to move the dashboard to'),
-                ]
-            );
         }
 
         if ($removePane == Url::fromRequest()->getPath()) {
@@ -90,6 +120,7 @@ class HomeAndPaneForm extends CompatForm
             $formaction = (string)Url::fromRequest()->setPath($removePane);
         }
 
+        $this->addElement('hidden', 'org_name', ['required' => false]);
         $this->addElement(
             'text',
             'name',
@@ -126,7 +157,7 @@ class HomeAndPaneForm extends CompatForm
                             'class'             => 'btn-primary',
                             'type'              => 'submit',
                             'name'              => 'btn_remove',
-                            'data-base-target'  => '_main',
+                            'data-base-target'  => $dbTarget,
                             'value'             => $btnRemoveLabel,
                             'formaction'        => $formaction
                         ]
@@ -148,14 +179,15 @@ class HomeAndPaneForm extends CompatForm
 
     public function onSuccess()
     {
+        $db = $this->dashboard->getConn();
         $requestPath = Url::fromRequest()->getPath();
         $orgHome = Url::fromRequest()->getParam('home');
         $home = $this->dashboard->getHomeByName($orgHome);
 
         if ($requestPath === 'dashboard/rename-pane' || $requestPath === 'dashboard/remove-pane') {
             // Update the given pane
-            $paneName = Url::fromRequest()->getParam('pane');
-            $pane = $this->dashboard->getPane($paneName);
+            $orgPane = $this->getValue('org_name');
+            $pane = $this->dashboard->getPane($orgPane);
 
             if ($this->getPopulatedValue('btn_update')) {
                 $newHome = $this->getPopulatedValue('home');
@@ -170,28 +202,39 @@ class HomeAndPaneForm extends CompatForm
                     return;
                 }
 
-                if ($orgHome !== $newHome) {
+                if (! array_key_exists($newHome, $this->dashboard->getHomes())) {
+                    $db->insert('dashboard_home', [
+                        'name'  => $newHome,
+                        'owner' => $this->dashboard->getUser()->getUsername()
+                    ]);
+
+                    $homeId = (int)$db->lastInsertId();
+                } elseif ($home->getName() !== $newHome) {
                     $homeId = $this->dashboard->getHomeByName($newHome)->getAttribute('homeId');
                 }
 
-                $paneDisabled = $pane->getDisabled();
+                $paneUpdated = false;
                 if ($this->getPopulatedValue('enable_pane') === 'y') {
-                    $paneDisabled = false;
+                    $paneUpdated = true;
 
-                    $this->dashboard->getConn()->update('dashlet_override', ['disabled' => (int)$paneDisabled], [
+                    $db->update('dashboard_override', ['disabled' => 0], [
+                        'dashboard_id = ?'    => $pane->getPaneId()
+                    ]);
+                    $db->update('dashlet_override', ['disabled' => 0], [
                         'dashboard_id = ?'    => $pane->getPaneId()
                     ]);
                 }
 
-                $this->dashboard->getConn()->update('dashboard', [
-                    'home_id'   => $homeId,
-                    'name'      => $this->getValue('name'),
-                    'label'     => $this->getPopulatedValue('title'),
-                    'disabled'  => (int)$paneDisabled
-                ], ['id = ?' => $pane->getPaneId()]);
+                if (! $paneUpdated) {
+                    $db->update('dashboard', [
+                        'home_id'   => $homeId,
+                        'name'      => $this->getValue('name'),
+                        'label'     => $this->getPopulatedValue('title'),
+                    ], ['id = ?' => $pane->getPaneId()]);
+                }
 
                 Notification::success(
-                    sprintf(t('Pane "%s" successfully renamed to "%s".'), $paneName, $this->getValue('name'))
+                    sprintf(t('Pane "%s" successfully renamed to "%s".'), $pane->getTitle(), $this->getValue('title'))
                 );
             } else {
                 // Remove the given pane and it's dashlets
@@ -208,9 +251,9 @@ class HomeAndPaneForm extends CompatForm
                     return;
                 }
 
-                $this->dashboard->getConn()->update('dashboard_home', [
-                    'name'   => $this->getValue('name')
-                ], ['id = ?' => $home->getAttribute('homeId')]);
+                $db->update('dashboard_home', ['name' => $this->getValue('name')], [
+                    'id = ?' => $home->getAttribute('homeId')
+                ]);
 
                 Notification::success(
                     sprintf(t('Home "%s" successfully renamed to "%s".'), $home->getName(), $this->getValue('name'))
@@ -238,11 +281,14 @@ class HomeAndPaneForm extends CompatForm
         if (Url::fromRequest()->getPath() !== 'dashboard/rename-pane') {
             $this->populate([
                 'name'  => $paneOrHome->getName(),
+                'org_name'  => $paneOrHome->getName()
             ]);
         } else {
             $this->populate([
-                'name'  => $paneOrHome->getName(),
-                'title' => $paneOrHome->getTitle()
+                'name'      => $paneOrHome->getName(),
+                'org_name'  => $paneOrHome->getName(),
+                'title'     => $paneOrHome->getTitle(),
+                'org_title' => $paneOrHome->getTitle()
             ]);
         }
     }
