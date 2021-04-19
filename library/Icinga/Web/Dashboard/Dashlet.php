@@ -28,6 +28,8 @@ class Dashlet extends BaseHtmlElement implements UserWidget
      */
     protected $userWidget = false;
 
+    private $override = false;
+
     /**
      * The url of this Dashlet
      *
@@ -63,7 +65,7 @@ class Dashlet extends BaseHtmlElement implements UserWidget
      */
     private $progressLabel;
 
-    /** @var integer Unique identifier of this dashlet */
+    /** @var string Unique identifier of this dashlet */
     private $dashletId;
 
     /**
@@ -84,20 +86,21 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     /**
      * Set the identifier of this dashlet
      *
-     * @param integer $id
+     * @param string $id
      *
      * @return Dashlet
      */
     public function setDashletId($id)
     {
         $this->dashletId = $id;
+
         return $this;
     }
 
     /**
      * Get the unique identifier of this dashlet
      *
-     * @return int
+     * @return string
      */
     public function getDashletId()
     {
@@ -107,6 +110,7 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     public function setName($name)
     {
         $this->name = $name;
+
         return $this;
     }
 
@@ -143,6 +147,7 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         if ($this->url !== null && ! $this->url instanceof Url) {
             $this->url = Url::fromPath($this->url);
         }
+
         return $this->url;
     }
 
@@ -156,6 +161,7 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     public function setUrl($url)
     {
         $this->url = $url;
+
         return $this;
     }
 
@@ -191,6 +197,7 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     public function setProgressLabel($label)
     {
         $this->progressLabel = $label;
+
         return $this;
     }
 
@@ -222,6 +229,7 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         if ($this->getDisabled() === true) {
             $array['disabled'] = 1;
         }
+
         return $array;
     }
 
@@ -281,10 +289,24 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     public function setUserWidget($userWidget = true)
     {
         $this->userWidget = (bool) $userWidget;
+
+        return $this;
     }
 
     public function isUserWidget()
     {
         return $this->userWidget;
+    }
+
+    public function setOverride($override = true)
+    {
+        $this->override = $override;
+
+        return $this;
+    }
+
+    public function isOverridden()
+    {
+        return $this->override;
     }
 }

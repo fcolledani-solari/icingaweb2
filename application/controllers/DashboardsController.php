@@ -55,6 +55,7 @@ class DashboardsController extends CompatController
                     $pane = $this->getParam('pane');
                     $this->dashboard->activate($pane);
                 }
+
                 if ($this->dashboard === null) {
                     $this->setTitle('Dashboard');
                 } else {

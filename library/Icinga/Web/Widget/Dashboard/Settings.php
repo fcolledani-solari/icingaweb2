@@ -6,6 +6,7 @@ use Icinga\Web\Widget\Dashboard;
 use ipl\Html\BaseHtmlElement;
 use ipl\Html\HtmlElement;
 use ipl\Web\Url;
+use ipl\Web\Widget\Icon;
 use ipl\Web\Widget\Link;
 
 class Settings extends BaseHtmlElement
@@ -112,25 +113,10 @@ class Settings extends BaseHtmlElement
 
                 $tableRow->add($th);
                 if ($pane->getDisabled()) {
-                    $tableRow->add(new HtmlElement('td', null, new HtmlElement('div', [
-                        'class' => 'icinga-controls',
-                        'style' => 'text-align: right;'
-                    ], [
-                        new HtmlElement('input', [
-                            'type'      => 'checkbox',
-                            'name'      => 'submit',
-                            'disabled'  => 'disabled',
-                            'checked'   => 'checked'
-                        ]),
-                        new HtmlElement(
-                            'label',
-                            ['class'    => 'toggle-switch disabled'],
-                            new HtmlElement(
-                                'span',
-                                ['class'    => 'toggle-slider']
-                            )
-                        )
-                    ])));
+                    $tableRow->add(new HtmlElement('td', ['style' => 'text-align: right; width: 1%;'], new Icon(
+                        'ban',
+                        ['style' => 'font-size: 1.5em; color: red; position: relative;']
+                    )));
 
                     $tbody->add($tableRow);
                     continue;
@@ -172,25 +158,9 @@ class Settings extends BaseHtmlElement
                         )));
 
                         if ($dashlet->getDisabled()) {
-                            $tr->add(new HtmlElement('td', null, new HtmlElement('div', [
-                                'class' => 'icinga-controls',
+                            $tr->add(new HtmlElement('td', [
                                 'style' => 'text-align: right;'
-                            ], [
-                                new HtmlElement('input', [
-                                    'type'      => 'checkbox',
-                                    'name'      => 'submit',
-                                    'disabled'  => 'disabled',
-                                    'checked'   => 'checked'
-                                ]),
-                                new HtmlElement(
-                                    'label',
-                                    ['class'    => 'toggle-switch disabled'],
-                                    new HtmlElement(
-                                        'span',
-                                        ['class'    => 'toggle-slider']
-                                    )
-                                )
-                            ])));
+                            ], new Icon('ban', ['style' => 'font-size: 1.5em; color: red; position: relative;'])));
                         }
 
                         $tableRow->add($tr);

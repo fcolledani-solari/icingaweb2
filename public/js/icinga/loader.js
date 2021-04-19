@@ -89,7 +89,8 @@
                 $target = this.getLinkTargetFor($form);
             }
 
-            if ($button.hasAttr('formaction')) {
+            // Overwrite the URL only if the form is not auto submitted
+            if ($button.hasAttr('formaction') && ! $autoSubmittedBy) {
                 // Overwrite the URL of the form action with the one specified in formaction attr
                 url = $button.attr('formaction');
             }

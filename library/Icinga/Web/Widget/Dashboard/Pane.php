@@ -3,6 +3,7 @@
 
 namespace Icinga\Web\Widget\Dashboard;
 
+use Icinga\Authentication\Auth;
 use Icinga\Common\Database;
 use Icinga\Data\ConfigObject;
 use Icinga\Exception\ProgrammingError;
@@ -36,6 +37,13 @@ class Pane implements UserWidget
      * @var string
      */
     private $title;
+
+    /**
+     * A user this panel belongs to
+     *
+     * @var string|null
+     */
+    private $owner = null;
 
     /**
      * An array of @see Dashlets that are displayed in this pane
@@ -84,6 +92,7 @@ class Pane implements UserWidget
     public function setParentId($homeId)
     {
         $this->parentId = $homeId;
+
         return $this;
     }
 
@@ -105,6 +114,7 @@ class Pane implements UserWidget
     public function setPaneId($id)
     {
         $this->paneId = $id;
+
         return $this;
     }
 
@@ -158,7 +168,32 @@ class Pane implements UserWidget
     public function setTitle($title)
     {
         $this->title = $title;
+
         return $this;
+    }
+
+    /**
+     * Set the owner of this panel
+     *
+     * @param $owner
+     *
+     * @return $this
+     */
+    public function setOwner($owner)
+    {
+        $this->owner = $owner;
+
+        return $this;
+    }
+
+    /**
+     * Get the owner of this panel
+     *
+     * @return string|null
+     */
+    public function getOwner()
+    {
+        return $this->owner;
     }
 
     /**
@@ -184,27 +219,6 @@ class Pane implements UserWidget
     }
 
     /**
-     * Check and get if any of the dashlets of this
-     *
-     * pane contains the given uid
-     *
-     * @param  string $uid
-     *
-     * @return false|Dashlet
-     */
-    public function hasDashletUid($uid)
-    {
-        /** @var Dashlet $dashlet */
-        foreach ($this->dashlets as $dashlet) {
-            if ($dashlet->getDashletId() === $uid) {
-                return $dashlet;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Return a dashlet with the given name if existing
      *
      * @param string $title         The title of the dashlet to return
@@ -226,53 +240,63 @@ class Pane implements UserWidget
     /**
      * Removes the dashlet with the given title if it exists in this pane
      *
-     * @param string $title         The pane
-     * @return Pane $this
+     * @param   Dashlet|string $dashlet
+     *
+     * @return  $this
      */
-    public function removeDashlet($title)
+    public function removeDashlet($dashlet)
     {
-        if ($this->hasDashlet($title)) {
-            $dashlet = $this->getDashlet($title);
-            if ($dashlet->isUserWidget() === true) {
-                $this->getDb()->delete('dashlet', [
-                    'dashboard_id = ?' => $this->paneId,
-                    'id = ?'            => $dashlet->getDashletId()
-                ]);
+        if (! $dashlet instanceof Dashlet) {
+            if (! $this->hasDashlet($dashlet)) {
+                throw new ProgrammingError('Dashlet does not exist: ' . $dashlet);
+            }
+
+            $dashlet = $this->getDashlet($dashlet);
+        }
+
+        if ($dashlet->isUserWidget() === true && ! $dashlet->getDisabled()) {
+            if ($dashlet->isOverridden()) {
+                $this->getDb()->delete('dashlet_override', ['dashlet_id = ?' => $dashlet->getDashletId()]);
             } else {
-                $this->getDb()->update('dashlet', [
-                    'disabled'  => true
-                ], [
-                    'dashboard_id = ?'  => $this->paneId,
-                    'id = ?'            => $dashlet->getDashletId()
+                $this->getDb()->delete('dashlet', [
+                    'id = ?'            => $dashlet->getDashletId(),
+                    'dashboard_id = ?'  => $dashlet->getPane()->getPaneId()
                 ]);
             }
-        } else {
-            throw new ProgrammingError('Dashlet does not exist: ' . $title);
+        } elseif (! $dashlet->getDisabled()) {
+            $owner = $dashlet->getPane()->getOwner();
+            if (empty($owner)) {
+                $owner = Auth::getInstance()->getUser()->getUsername();
+            }
+
+            $this->getDb()->insert('dashlet_override', [
+                'dashlet_id'    => $dashlet->getDashletId(),
+                'dashboard_id'  => $dashlet->getPane()->getPaneId(),
+                'owner'         => $owner,
+                'disabled'      => true
+            ]);
         }
+
         return $this;
     }
 
     /**
      * Removes all or a given list of dashlets from this pane
      *
-     * @param array $dashlets Optional list of dashlet titles
+     * @param array|null $dashlets Optional list of dashlet titles
+     *
      * @return Pane $this
      */
     public function removeDashlets(array $dashlets = null)
     {
         if ($dashlets === null) {
-            if ($this->isUserWidget() === false) {
-                $this->getDb()->update('dashlet', [
-                    'disabled'  => true
-                ], ['dashboard_id = ?'  => $this->paneId]);
-            } else {
-                $this->getDb()->delete('dashlet', ['dashboard_id = ?'   => $this->paneId]);
-            }
-        } else {
-            foreach ($dashlets as $dashlet) {
-                $this->removeDashlet($dashlet);
-            }
+            $dashlets = $this->getDashlets();
         }
+
+        foreach ($dashlets as $dashlet) {
+            $this->removeDashlet($dashlet);
+        }
+
         return $this;
     }
 
@@ -403,7 +427,7 @@ class Pane implements UserWidget
      *
      * @param boolean $disabled
      */
-    public function setDisabled($disabled = true)
+    public function setDisabled($disabled)
     {
         $this->disabled = (bool) $disabled;
 

@@ -49,19 +49,6 @@ class HomeAndPaneForm extends CompatForm
             $dashboardHomes = $this->dashboard->changeElementPos($dashboardHomes, $home);
         }
 
-        $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
-        if ($pane->getDisabled()) {
-            $this->addElement(
-                'checkbox',
-                'enable_pane',
-                [
-                    'label'         => t('Enable Pane'),
-                    'value'         => 'y',
-                    'description'   => t('Uncheck this checkbox if you want to enable this pane.')
-                ]
-            );
-        }
-
         $description    = t('Edit the current home name');
         $btnUpdateLabel = t('Update Home');
         $btnRemoveLabel = t('Remove Home');
@@ -72,6 +59,19 @@ class HomeAndPaneForm extends CompatForm
             $btnUpdateLabel = t('Update Pane');
             $btnRemoveLabel = t('Remove Pane');
             $formaction     = (string)Url::fromRequest()->setPath($removePane);
+
+            $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
+            if ($pane->getDisabled()) {
+                $this->addElement(
+                    'checkbox',
+                    'enable_pane',
+                    [
+                        'label'         => t('Enable Pane'),
+                        'value'         => 'n',
+                        'description'   => t('Check this box if you want to enable this pane.')
+                    ]
+                );
+            }
 
             $this->addElement(
                 'select',
@@ -149,9 +149,8 @@ class HomeAndPaneForm extends CompatForm
     public function onSuccess()
     {
         $requestPath = Url::fromRequest()->getPath();
-        $orgParent = Url::fromRequest()->getParam('home');
-        $homes = $this->dashboard->getHomes();
-        $home = $homes[$orgParent];
+        $orgHome = Url::fromRequest()->getParam('home');
+        $home = $this->dashboard->getHomeByName($orgHome);
 
         if ($requestPath === 'dashboard/rename-pane' || $requestPath === 'dashboard/remove-pane') {
             // Update the given pane
@@ -159,48 +158,53 @@ class HomeAndPaneForm extends CompatForm
             $pane = $this->dashboard->getPane($paneName);
 
             if ($this->getPopulatedValue('btn_update')) {
-                if (! empty($pane->getGlobalUid())) {
-                    if ($this->getPopulatedValue('enable_pane') === 'n') {
-                        $this->dashboard->getConn()->update('dashboard', [
-                            'disabled'  => (int)false
-                        ], ['id = ?'    => $pane->getPaneId()]);
-                    }
+                $newHome = $this->getPopulatedValue('home');
+                $homeId = $home->getAttribute('homeId');
 
-                    Notification::info(sprintf(t('Default pane "%s" can\'t be edited.'), $paneName));
+                if (! $pane->getOwner() && $orgHome !== $newHome) {
+                    Notification::warning(sprintf(
+                        t('It is not permitted to move system dashboard: %s'),
+                        $pane->getTitle()
+                    ));
+
                     return;
                 }
 
-                $newParent = $this->getPopulatedValue('home');
-                $parent = $home->getAttribute('homeId');
-
-                if ($orgParent !== $newParent) {
-                    $parent = $homes[$newParent]->getAttribute('homeId');
+                if ($orgHome !== $newHome) {
+                    $homeId = $this->dashboard->getHomeByName($newHome)->getAttribute('homeId');
                 }
 
-                $newPane  = $this->getValue('name');
+                $paneDisabled = $pane->getDisabled();
+                if ($this->getPopulatedValue('enable_pane') === 'y') {
+                    $paneDisabled = false;
+
+                    $this->dashboard->getConn()->update('dashlet_override', ['disabled' => (int)$paneDisabled], [
+                        'dashboard_id = ?'    => $pane->getPaneId()
+                    ]);
+                }
+
                 $this->dashboard->getConn()->update('dashboard', [
-                    'home_id'   => $parent,
-                    'name'      => $newPane,
-                    'label'     => $this->getPopulatedValue('title')
+                    'home_id'   => $homeId,
+                    'name'      => $this->getValue('name'),
+                    'label'     => $this->getPopulatedValue('title'),
+                    'disabled'  => (int)$paneDisabled
                 ], ['id = ?' => $pane->getPaneId()]);
 
                 Notification::success(
-                    sprintf(t('Pane "%s" successfully renamed to "%s".'), $paneName, $newPane)
+                    sprintf(t('Pane "%s" successfully renamed to "%s".'), $paneName, $this->getValue('name'))
                 );
             } else {
                 // Remove the given pane and it's dashlets
-                if (empty($pane->getGlobalUid())) {
-                    $pane->removeDashlets();
-                }
+                $pane->removeDashlets();
                 $this->dashboard->removePane($pane->getName());
 
-                Notification::success(t('Dashboard has been removed.') . ': ' . $pane->getTitle());
+                Notification::success(t('Dashboard has been removed') . ': ' . $pane->getTitle());
             }
         } else {
             // Update the given dashboard home
             if ($this->getPopulatedValue('btn_update')) {
                 if (Dashboard::DEFAULT_HOME === $home->getName()) {
-                    Notification::info(sprintf(t('Default home "%s" can\'t be edited.'), $home->getName()));
+                    Notification::warning(sprintf(t('It is not permitted to edit default home: %s'), $home->getName()));
                     return;
                 }
 
@@ -213,12 +217,14 @@ class HomeAndPaneForm extends CompatForm
                 );
             } else {
                 // Remove the given home with it's panes and dashlets
-                $this->dashboard->removeHome($orgParent);
+                $this->dashboard->removeHome($orgHome);
 
-                if ($orgParent !== Dashboard::DEFAULT_HOME) {
-                    Notification::success(t('Dashboard home has been removed.') . ': ' . $orgParent);
+                if ($orgHome !== Dashboard::DEFAULT_HOME) {
+                    Notification::success(sprintf(t('Dashboard home has been removed: %s'), $orgHome));
                 } else {
-                    Notification::warning(sprintf(t('%s home can\'t be deleted.'), Dashboard::DEFAULT_HOME));
+                    Notification::warning(
+                        sprintf(t('It is not permitted to remove default home: %s'), Dashboard::DEFAULT_HOME)
+                    );
                 }
             }
         }

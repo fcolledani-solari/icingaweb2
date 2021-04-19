@@ -72,8 +72,8 @@ class DashletForm extends CompatForm
                     }
                 }
             } else {
-                if (array_key_exists($populated, $dashboardHomes)) {
-                    $homeId = $this->dashboard->getHomes()[$populated]->getAttribute('homeId');
+                if (array_key_exists($populated, $this->dashboard->getHomes())) {
+                    $homeId = $this->dashboard->getHomeByName($populated)->getAttribute('homeId');
                     // We have to load dashboards each time the home Id changed
                     $this->dashboard->loadUserDashboardsFromDatabase($homeId);
                     $this->panes = $this->dashboard->getPaneKeyTitleArray();
@@ -87,7 +87,7 @@ class DashletForm extends CompatForm
                 Url::fromRequest()->getParam('dashlet')
             )));
             $this->addElement('submit', 'remove_dashlet', [
-                'label'          => t('Remove Dashlet'),
+                'label' => t('Remove Dashlet'),
             ]);
         } else {
             $submitLabel = t('Add To Dashboard');
@@ -185,18 +185,21 @@ class DashletForm extends CompatForm
 
             $this->add(new HtmlElement('hr'));
             if (Url::fromRequest()->getPath() === 'dashboard/update-dashlet') {
-                $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
-                $dashlet = $pane->getDashlet(Url::fromRequest()->getParam('dashlet'));
-                if ($dashlet->getDisabled()) {
-                    $this->addElement(
-                        'checkbox',
-                        'enable_dashlet',
-                        [
-                            'label'         => t('Enable Dashlet'),
-                            'value'         => 'y',
-                            'description'   => t('Uncheck this checkbox if you want to enable this dashlet.')
-                        ]
-                    );
+                if (Url::fromRequest()->getParam('home') === $this->getValue('home')) {
+                    $pane = $this->dashboard->getPane(Url::fromRequest()->getParam('pane'));
+                    $dashlet = $pane->getDashlet(Url::fromRequest()->getParam('dashlet'));
+
+                    if ($dashlet->getDisabled()) {
+                        $this->addElement(
+                            'checkbox',
+                            'enable_dashlet',
+                            [
+                                'label'         => t('Enable Dashlet'),
+                                'value'         => 'n',
+                                'description'   => t('Check this box if you want to enable this dashlet.')
+                            ]
+                        );
+                    }
                 }
             }
             $this->addElement(
@@ -256,36 +259,40 @@ class DashletForm extends CompatForm
 
     public function createDashlet()
     {
-        $homes = $this->dashboard->getHomes();
         $db = $this->dashboard->getConn();
-        if (! array_key_exists($this->getValue('home'), $homes)) {
+        if (! array_key_exists($this->getValue('home'), $this->dashboard->getHomes())) {
             $db->insert('dashboard_home', [
                 'name'  => $this->getValue('home'),
                 'owner' => $this->dashboard->getUser()->getUsername()
             ]);
 
-            $newParent = $db->lastInsertId();
+            $homeId = (int)$db->lastInsertId();
         } else {
-            $newParent = $homes[$this->getValue('home')]->getAttribute('homeId');
+            $homeId = (int)$this->dashboard->getHomeByName($this->getValue('home'))->getAttribute('homeId');
         }
 
         try {
             $this->paneName = $this->getValue('pane');
-            if (in_array($this->paneName, $this->panes)) {
-                $this->paneName = array_search($this->paneName, $this->panes);
-            }
-
             $pane = $this->dashboard->getPane($this->paneName);
             $paneId = $pane->getPaneId();
-        } catch (ProgrammingError $e) {
-            $db->insert('dashboard', [
-                'home_id'   => $newParent,
-                'name'      => $this->getValue('pane'),
-                'label'     => $this->getValue('pane'),
-            ]);
 
-            $paneId = $db->lastInsertId();
+            // If there is already a pane with same name in another home we have to raise
+            // an exception so that the new pane can be created in this home
+            if ($homeId !== $pane->getParentId()) {
+                throw new ProgrammingError('Pane already exist in another home.');
+            }
+        } catch (ProgrammingError $e) {
             $pane = null;
+            $paneName = $this->getValue('pane');
+            $paneId = $this->dashboard->getSHA1($this->getValue('home') . $paneName);
+
+            $db->insert('dashboard', [
+                'id'        => $paneId,
+                'home_id'   => $homeId,
+                'owner'     => $this->dashboard->getUser()->getUsername(),
+                'name'      => $paneName,
+                'label'     => $paneName,
+            ]);
         }
 
         try {
@@ -303,9 +310,13 @@ class DashletForm extends CompatForm
                 throw new ProgrammingError('Dashlet does not exist.');
             }
 
-            Notification::info(t('There already exists a Dashlet with the same name.'));
+            Notification::warning(t('There already exists a Dashlet with the same name.'));
         } catch (ProgrammingError $err) {
+            $dashletId = $this->dashboard->getSHA1(
+                $this->getValue('home') . $this->getValue('pane') . $this->getValue('dashlet')
+            );
             $db->insert('dashlet', [
+                'id'            => $dashletId,
                 'dashboard_id'  => $paneId,
                 'owner'         => $this->dashboard->getUser()->getUsername(),
                 'name'          => $this->getValue('dashlet'),
@@ -319,76 +330,106 @@ class DashletForm extends CompatForm
 
     public function updateDashlet()
     {
-        $homes = $this->dashboard->getHomes();
         $db = $this->dashboard->getConn();
+        // Original home identifier
+        $orgHomeId = (int)$this->getValue('org_parentId');
+        $defaultHome = $this->dashboard->getHomeByName(Dashboard::DEFAULT_HOME);
+        $this->dashboard->loadUserDashboardsFromDatabase($orgHomeId);
 
-        $orgParent = (int)$this->getValue('org_parentId');
-        $pane = $this->dashboard->getPane($this->getValue('org_pane'));
-        $dashlet = $pane->getDashlet($this->getValue('org_dashlet'));
+        // Original pane and dashlet
+        $orgPane = $this->dashboard->getPane($this->getValue('org_pane'));
+        $orgDashlet = $orgPane->getDashlet($this->getValue('org_dashlet'));
 
-        if (! empty($dashlet->getGlobalUid())) {
-            if ($this->getPopulatedValue('enable_dashlet') === 'n') {
-                $db->update('dashlet', [
-                    'disabled'  => (int)false
-                ], ['id = ?'    => $dashlet->getDashletId()]);
-            }
-
-            Notification::info(sprintf(t('Default dashlet "%s" can\'t be edited'), $dashlet->getTitle()));
-            return;
-        }
-
-        if (Url::fromRequest()->getParam('home') === $this->getValue('home')) {
-            $newParent = $orgParent;
-        } elseif (array_key_exists($this->getValue('home'), $homes)) {
-            $newParent = $homes[$this->getValue('home')]->getAttribute('homeId');
+        $homeName = $this->getValue('home');
+        if (Url::fromRequest()->getParam('home') === $homeName) {
+            $homeId = $orgHomeId;
+        } elseif (array_key_exists($homeName, $this->dashboard->getHomes())) {
+            $homeId = $this->dashboard->getHomeByName($homeName)->getAttribute('homeId');
         } else {
             $db->insert('dashboard_home', [
                 'name'  => $this->getValue('home'),
                 'owner' => $this->dashboard->getUser()->getUsername()
             ]);
 
-            $newParent = $db->lastInsertId();
+            $homeId = $db->lastInsertId();
         }
 
-        if ($pane->getParentId() !== $orgParent) {
-            $this->dashboard->loadUserDashboardsFromDatabase($orgParent);
-            $pane = $this->dashboard->getPane($this->getValue('org_pane'));
-        }
-
-        $paneId = $pane->getPaneId();
-        $this->dashboard->loadUserDashboardsFromDatabase($newParent);
+        $this->dashboard->loadUserDashboardsFromDatabase($homeId);
         if ($this->dashboard->hasPane($this->getValue('pane'))) {
             $newPane = $this->dashboard->getPane($this->getValue('pane'));
-            if ($newPane->getParentId() === $newParent) {
-                if ($paneId !== $newPane->getPaneId()) {
-                    $paneId = $newPane->getPaneId();
-                }
-            } else {
-                $db->insert('dashboard', [
-                    'home_id'   => $newParent,
-                    'name'      => $this->getValue('pane'),
-                    'label'     => $this->getValue('pane'),
-                ]);
+            $paneId = $newPane->getPaneId();
 
-                $paneId = $db->lastInsertId();
-            }
+            $db->update('dashboard', ['home_id' => $homeId], ['id = ?' => $newPane->getPaneId()]);
         } else {
+            $paneId = $this->dashboard->getSHA1($this->getValue('home') . $this->getValue('pane'));
             $db->insert('dashboard', [
-                'home_id'   => $newParent,
+                'id'        => $paneId,
+                'home_id'   => $homeId,
                 'name'      => $this->getValue('pane'),
+                'owner'     => $this->dashboard->getUser()->getUsername(),
                 'label'     => $this->getValue('pane'),
             ]);
+        }
 
-            $paneId = $db->lastInsertId();
+        // Whether the original home id matches the default home id
+        if ($orgDashlet->getPane()->getParentId() === $defaultHome->getAttribute('homeId')) {
+            $dashletUrl = null;
+            $dashletLabel = null;
+            $dashletDisabled = $orgDashlet->getDisabled();
+
+            if ($orgDashlet->getTitle() !== $this->getValue('dashlet')) {
+                $dashletLabel = $this->getValue('dashlet');
+            } elseif ($orgDashlet->getUrl() !== $this->getValue('url')) {
+                $dashletUrl = $this->getValue('url');
+            }
+
+            if ($this->getPopulatedValue('enable_dashlet') === 'y') {
+                $dashletDisabled = false;
+            }
+
+            $dashletUpdated = false;
+            if (! $orgDashlet->isUserWidget()) {
+                if ($defaultHome->getName() !== $this->getValue('home')) {
+                    Notification::warning(sprintf(
+                        t('It is not permitted to move system dashlet: %s'),
+                        $orgDashlet->getTitle()
+                    ));
+
+                    return;
+                }
+
+                $dashletUpdated = true;
+                $db->insert('dashlet_override', [
+                    'dashlet_id'    => $orgDashlet->getDashletId(),
+                    'dashboard_id'  => $orgDashlet->getPane()->getPaneId(),
+                    'owner'         => $this->dashboard->getUser()->getUsername(),
+                    'label'         => $dashletLabel,
+                    'url'           => $dashletUrl,
+                    'disabled'      => (int)$dashletDisabled
+                ]);
+            } elseif ($orgDashlet->isOverridden()) {
+                $dashletUpdated = true;
+
+                $db->update('dashlet_override', [
+                    'label'     => $dashletLabel,
+                    'url'       => $dashletUrl,
+                    'disabled'  => (int)$dashletDisabled
+                ], ['dashlet_id = ?'    => $orgDashlet->getDashletId()]);
+            }
+
+            if ($dashletUpdated) {
+                Notification::success(t('Dashlet updated!'));
+                return;
+            }
         }
 
         $db->update('dashlet', [
             'dashboard_id'  => $paneId,
             'owner'         => $this->dashboard->getUser()->getUsername(),
-            'name'          => $dashlet->getName(),
+            'name'          => $orgDashlet->getName(),
             'label'         => $this->getValue('dashlet'),
             'url'           => $this->getValue('url')
-        ], ['dashlet.id=?'  => $dashlet->getDashletId()]);
+        ], ['dashlet.id = ?'  => $orgDashlet->getDashletId()]);
 
         Notification::success(t('Dashlet updated'));
     }
@@ -416,14 +457,6 @@ class DashletForm extends CompatForm
     public function setDashboard(Dashboard $dashboard)
     {
         $this->dashboard = $dashboard;
-    }
-
-    /**
-     * @return \Icinga\Web\Widget\Dashboard
-     */
-    public function getDashboard()
-    {
-        return $this->dashboard;
     }
 
     /**
