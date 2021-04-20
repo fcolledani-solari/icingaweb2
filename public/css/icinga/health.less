@@ -1,0 +1,101 @@
+// Style
+
+.app-health {
+  &, ul {
+    list-style-type: none;
+  }
+
+  em {
+    color: @text-color-light;
+    font-weight: normal;
+    font-size: 80%;
+  }
+
+  i.state {
+    .rounded-corners(1em);
+
+    &.state-ok {
+      background-color: @color-ok;
+    }
+
+    &.state-warning {
+      background-color: @color-warning;
+    }
+
+    &.state-critical {
+      background-color: @color-critical;
+    }
+
+    &.state-unknown {
+      background-color: @color-unknown;
+    }
+  }
+
+  i.icon {
+    &.state-ok {
+      color: @color-ok;
+    }
+
+    &.state-warning {
+      color: @color-warning;
+    }
+
+    &.state-critical {
+      color: @color-critical;
+    }
+
+    &.state-unknown {
+      color: @color-unknown;
+    }
+  }
+
+  .health-intro {
+    border-left: .5em solid @gray-lighter;
+  }
+
+  .module-health p {
+    background: @gray-lighter;
+    font-family: @font-family-fixed;
+  }
+}
+
+// Layout
+
+.app-health {
+  &, ul {
+    margin: 0;
+    padding: 0;
+  }
+
+  .health-intro {
+    margin-bottom: 2em;
+    padding: 1em;
+
+    strong {
+      font-size: 2em;
+    }
+  }
+
+  .module-health li {
+    display: flex;
+    align-items: center;
+    margin-bottom: .5em;
+
+    i {
+      flex-shrink: 0;
+      width: 1em;
+      height: 1em;
+    }
+
+    p {
+      flex: 1 1 auto;
+      margin: 0 1em;
+      padding: .1em 0;
+      max-width: 50em;
+    }
+
+    a {
+      white-space: nowrap;
+    }
+  }
+}
