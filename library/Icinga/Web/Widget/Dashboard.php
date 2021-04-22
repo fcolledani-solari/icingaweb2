@@ -181,6 +181,14 @@ class Dashboard extends BaseHtmlElement
      */
     protected function loadSystemDashboards()
     {
+        if (Url::fromRequest()->hasParam('home')) {
+            $home = Url::fromRequest()->getParam('home');
+            // If the home param being loaded does not match the default home do nothing
+            if ($home !== self::DEFAULT_HOME) {
+                return false;
+            }
+        }
+
         $db = $this->getConn();
         if (! array_key_exists(self::DEFAULT_HOME, $this->homes)) {
             $db->insert('dashboard_home', [
@@ -315,6 +323,14 @@ class Dashboard extends BaseHtmlElement
 
         if (! count($config)) {
             return false;
+        }
+
+        if (Url::fromRequest()->hasParam('home')) {
+            $home = Url::fromRequest()->getParam('home');
+            // If the home param being loaded does not match the default home do nothing
+            if ($home !== self::DEFAULT_HOME) {
+                return false;
+            }
         }
 
         $this->loadHomeItems();
@@ -865,7 +881,7 @@ class Dashboard extends BaseHtmlElement
 
             $this->getConn()->delete($tableName, [
                 $rowName    => $pane->getPaneId(),
-                'owner'     => $pane->getOwner()
+                'owner = ?' => $pane->getOwner()
             ]);
         } else {
             // User is going to disable this system pane
@@ -921,11 +937,16 @@ class Dashboard extends BaseHtmlElement
      *
      * @return array
      */
-    public function getPaneKeyTitleArray()
+    public function getPaneKeyTitleArray($parent = 0)
     {
         $list = [];
         foreach ($this->panes as $name => $pane) {
             if ($pane->getDisabled()) {
+                continue;
+            }
+
+            // We don't allow any system panes to be listed at other homes as well
+            if (! empty($parent) && $parent !== $pane->getParentId()) {
                 continue;
             }
 

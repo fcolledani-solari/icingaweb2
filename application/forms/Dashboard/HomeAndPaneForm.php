@@ -46,7 +46,7 @@ class HomeAndPaneForm extends CompatForm
         $populated = $this->getPopulatedValue('home');
         $dashboardHomes = $this->dashboard->getHomeKeyNameArray();
         if ($populated === null) {
-            $dashboardHomes = $this->dashboard->changeElementPos($dashboardHomes, $home);
+            $dashboardHomes = $this->dashboard->switchElementPos($dashboardHomes, $home);
         }
 
         $dbTarget = '_main';
@@ -190,12 +190,12 @@ class HomeAndPaneForm extends CompatForm
             $pane = $this->dashboard->getPane($orgPane);
 
             if ($this->getPopulatedValue('btn_update')) {
-                $newHome = $this->getPopulatedValue('home');
-                $homeId = $home->getAttribute('homeId');
+                $newHome = $this->getPopulatedValue('home', $orgHome);
+                $orgHomeId = $home->getAttribute('homeId');
 
                 if (! $pane->getOwner() && $orgHome !== $newHome) {
                     Notification::warning(sprintf(
-                        t('It is not permitted to move system dashboard: %s'),
+                        t('It is not allowed to move system dashboard: "%s"'),
                         $pane->getTitle()
                     ));
 
@@ -211,6 +211,8 @@ class HomeAndPaneForm extends CompatForm
                     $homeId = (int)$db->lastInsertId();
                 } elseif ($home->getName() !== $newHome) {
                     $homeId = $this->dashboard->getHomeByName($newHome)->getAttribute('homeId');
+                } else {
+                    $homeId = $orgHomeId;
                 }
 
                 $paneUpdated = false;
@@ -233,9 +235,22 @@ class HomeAndPaneForm extends CompatForm
                     ], ['id = ?' => $pane->getPaneId()]);
                 }
 
-                Notification::success(
-                    sprintf(t('Pane "%s" successfully renamed to "%s".'), $pane->getTitle(), $this->getValue('title'))
+                $message = sprintf(
+                    t('Pane "%s" successfully renamed to "%s".'),
+                    $pane->getTitle(),
+                    $this->getValue('title')
                 );
+
+                if ($orgHomeId !== $homeId) {
+                    $message = sprintf(
+                        t('Pane "%s" successfully moved from "%s" to "%s"'),
+                        $this->getValue('title'),
+                        $home->getName(),
+                        $newHome
+                    );
+                }
+
+                Notification::success($message);
             } else {
                 // Remove the given pane and it's dashlets
                 $pane->removeDashlets();
@@ -247,7 +262,15 @@ class HomeAndPaneForm extends CompatForm
             // Update the given dashboard home
             if ($this->getPopulatedValue('btn_update')) {
                 if (Dashboard::DEFAULT_HOME === $home->getName()) {
-                    Notification::warning(sprintf(t('It is not permitted to edit default home: %s'), $home->getName()));
+                    Notification::warning(sprintf(t('It is not allowed to edit default home: "%s"'), $home->getName()));
+                    return;
+                }
+
+                if (Dashboard::DEFAULT_HOME === $this->getValue('name')) {
+                    Notification::warning(
+                        sprintf(t('There already exists a home with same name: "%s"'), Dashboard::DEFAULT_HOME)
+                    );
+
                     return;
                 }
 
@@ -263,10 +286,10 @@ class HomeAndPaneForm extends CompatForm
                 $this->dashboard->removeHome($orgHome);
 
                 if ($orgHome !== Dashboard::DEFAULT_HOME) {
-                    Notification::success(sprintf(t('Dashboard home has been removed: %s'), $orgHome));
+                    Notification::success(sprintf(t('Dashboard home has been removed: "%s"'), $orgHome));
                 } else {
                     Notification::warning(
-                        sprintf(t('It is not permitted to remove default home: %s'), Dashboard::DEFAULT_HOME)
+                        sprintf(t('It is not allowed to remove default home: "%s"'), Dashboard::DEFAULT_HOME)
                     );
                 }
             }

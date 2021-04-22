@@ -305,7 +305,7 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         return $this;
     }
 
-    public function isOverridden()
+    public function isOverridesSystem()
     {
         return $this->override;
     }

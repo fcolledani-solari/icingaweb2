@@ -257,7 +257,7 @@ class Pane implements UserWidget
         }
 
         if ($dashlet->isUserWidget() === true && ! $dashlet->getDisabled()) {
-            if ($dashlet->isOverridden()) {
+            if ($dashlet->isOverridesSystem()) {
                 $this->getDb()->delete('dashlet_override', ['dashlet_id = ?' => $dashlet->getDashletId()]);
             } else {
                 $this->getDb()->delete('dashlet', [
@@ -447,6 +447,8 @@ class Pane implements UserWidget
     }
 
     /**
+     * Set whether this pane overrides a system pane
+     *
      * @param  boolean $value
      *
      * @return $this
@@ -458,16 +460,29 @@ class Pane implements UserWidget
         return $this;
     }
 
-    public function isOverriden()
+    /**
+     * Get whether this pane overrides a system pane with the same name
+     *
+     * @return bool
+     */
+    public function isOverridesSystem()
     {
         return $this->override;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function setUserWidget($userWidget = true)
     {
         $this->userWidget = (bool) $userWidget;
+
+        return $this;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function isUserWidget()
     {
         return $this->userWidget;
