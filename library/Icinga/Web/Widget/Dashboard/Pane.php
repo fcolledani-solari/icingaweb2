@@ -307,8 +307,15 @@ class Pane implements UserWidget
      *
      * @return array
      */
-    public function getDashlets()
+    public function getDashlets($ordered = true)
     {
+        if ($ordered) {
+            $dashlets = $this->dashlets;
+            ksort($dashlets);
+
+            return $dashlets;
+        }
+
         return $this->dashlets;
     }
 
