@@ -149,7 +149,7 @@ class Menu extends Navigation
             ->from('dashboard_home as dh')
             ->where([
                 'dh.owner = ?'  => Auth::getInstance()->getUser()->getUsername(),
-                'dh.owner IS NULL'
+                'dh.owner = \'icingaweb2\''
             ], 'OR'));
 
         $priority = 10;

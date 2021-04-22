@@ -42,6 +42,9 @@ class Dashboard extends BaseHtmlElement
     /** @var string Name of the default home */
     const DEFAULT_HOME = 'Default Home';
 
+    /** @var string Default user of the "Default Home" */
+    const DEFAULT_HOME_USER = 'icingaweb2';
+
     /** @var string Preserve key name for coming features */
     const AVAILABLE_DASHLETS = 'Available Dashlets';
 
@@ -63,11 +66,11 @@ class Dashboard extends BaseHtmlElement
     protected $tabs;
 
     /**
-     * The parameter that will be added to identify panes and homes
+     * The parameter that will be added to identify panes
      *
      * @var array
      */
-    private $tabParam = ['home', 'pane'];
+    private $tabParam = 'pane';
 
     /**
      * Home items loaded from the „dashboard“ menu item
@@ -182,7 +185,7 @@ class Dashboard extends BaseHtmlElement
         if (! array_key_exists(self::DEFAULT_HOME, $this->homes)) {
             $db->insert('dashboard_home', [
                 'name'  => self::DEFAULT_HOME,
-                'owner' => null
+                'owner' => self::DEFAULT_HOME_USER
             ]);
 
             $parent = $db->lastInsertId();
@@ -197,7 +200,7 @@ class Dashboard extends BaseHtmlElement
         $panes = [];
         /** @var NavigationItem $dashboardPane */
         foreach ($navigation as $dashboardPane) {
-            $paneId = $this->getSHA1(null . self::DEFAULT_HOME . $dashboardPane->getName());
+            $paneId = $this->getSHA1(self::DEFAULT_HOME_USER . self::DEFAULT_HOME . $dashboardPane->getName());
             $pane = (new Pane($dashboardPane->getName()))
                 ->setTitle($dashboardPane->getLabel())
                 ->setParentId($parent)
@@ -206,13 +209,13 @@ class Dashboard extends BaseHtmlElement
             $dashlets = [];
             /** @var NavigationItem $dashlet */
             foreach ($dashboardPane->getChildren() as $dashlet) {
-                $systemDashletId = $this->getSHA1(
-                    null . self::DEFAULT_HOME . $pane->getName() . $dashlet->getName()
+                $dashletId = $this->getSHA1(
+                    self::DEFAULT_HOME_USER . self::DEFAULT_HOME . $pane->getName() . $dashlet->getName()
                 );
 
                 $newDashlet = (new Dashlet($dashlet->getLabel(), $dashlet->getUrl()->getRelativeUrl(), $pane))
                     ->setName($dashlet->getName())
-                    ->setDashletId($systemDashletId);
+                    ->setDashletId($dashletId);
 
                 $dashlets[$newDashlet->getName()] = $newDashlet;
             }
@@ -250,10 +253,9 @@ class Dashboard extends BaseHtmlElement
             ->columns('*')
             ->from('dashboard')
             ->where([
-                'home_id = ?' => $parentId,
-                'owner = ?' => $this->user->getUsername()
-            ])
-        );
+                'home_id = ?'   => $parentId,
+                'owner = ?'     => $this->user->getUsername()
+            ]));
 
         $this->setActiveHome($parentId);
 
@@ -272,8 +274,7 @@ class Dashboard extends BaseHtmlElement
                 ->where([
                     'dashboard_id = ?'  => $dashboard->id,
                     'dashlet.owner = ?' => $this->user->getUsername()
-                ])
-            );
+                ]));
 
             $dashlets = [];
             foreach ($newResults as $dashletData) {
@@ -316,9 +317,14 @@ class Dashboard extends BaseHtmlElement
             return false;
         }
 
+        $this->loadHomeItems();
         $db = $this->getConn();
+
         if (! array_key_exists(self::DEFAULT_HOME, $this->homes)) {
-            $db->insert('dashboard_home', ['name'  => self::DEFAULT_HOME]);
+            $db->insert('dashboard_home', [
+                'name'  => self::DEFAULT_HOME,
+                'owner' => self::DEFAULT_HOME_USER
+            ]);
 
             $homeId = $db->lastInsertId();
         } else {
@@ -358,10 +364,10 @@ class Dashboard extends BaseHtmlElement
                     $panes[$paneName] = $this->getPane($paneName);
                 }
 
-                $dashlet = (new Dashlet(
+                $dashlet = new Dashlet(
                     $part->get('title', $dashletName),
                     $part->get('url'),
-                    $panes[$paneName])
+                    $panes[$paneName]
                 );
 
                 $dashlet
@@ -411,8 +417,18 @@ class Dashboard extends BaseHtmlElement
             $currentPane = null;
             if ($this->hasPane($pane->getName())) {
                 $currentPane = $this->getPane($pane->getName());
-                $currentPane->setTitle($pane->getTitle());
-                $currentPane->setDisabled($pane->getDisabled());
+                // Check if the user has cloned system pane without modifying it
+                if ($pane->getOwner() && ! $currentPane->getOwner()) {
+                    // Cleaning up cloned system panes from the DB
+                    if (! $pane->hasDashlets() && $pane->getTitle() === $currentPane->getTitle()) {
+                        $this->getConn()->delete('dashboard', [
+                            'id = ?'    => $pane->getPaneId(),
+                            'owner = ?' => $pane->getOwner()
+                        ]);
+
+                        continue;
+                    }
+                }
             }
 
             // This is only for panes which are loaded from user specific dashboard.ini files
@@ -423,8 +439,7 @@ class Dashboard extends BaseHtmlElement
                     ->where([
                         'id = ?'    => $pane->getPaneId(),
                         'owner = ?' => $pane->getOwner()
-                    ])
-                )->fetch();
+                    ]))->fetch();
 
                 if (! $findPane) {
                     $this->getConn()->insert('dashboard', [
@@ -446,8 +461,7 @@ class Dashboard extends BaseHtmlElement
                         'owner = ?'         => $this->user->getUsername(),
                         'home_id = ?'       => $pane->getParentId(),
                         'dashboard_id = ?'  => $pane->getPaneId()
-                    ])
-                )->fetch();
+                    ]))->fetch();
 
                 if ($customPane) {
                     // Remove the custom pane if label is null|rolled back to it's original value and is not disabled
@@ -478,8 +492,7 @@ class Dashboard extends BaseHtmlElement
                             'owner = ?'         => $this->user->getUsername(),
                             'dashlet_id = ?'    => $dashlet->getDashletId(),
                             'dashboard_id = ?'  => $pane->getPaneId()
-                        ])
-                    )->fetch();
+                        ]))->fetch();
 
                     if ($customDashlet) {
                         // Remove the custom dashlet if label & url are null|rolled back to their original
@@ -516,8 +529,7 @@ class Dashboard extends BaseHtmlElement
                             'id = ?'            => $dashlet->getDashletId(),
                             'owner = ?'         => $pane->getOwner(),
                             'dashboard_id = ?'  => $pane->getPaneId()
-                        ])
-                    )->fetch();
+                        ]))->fetch();
 
                     if (! $findDashlet) {
                         $this->getConn()->insert('dashlet', [
@@ -544,10 +556,20 @@ class Dashboard extends BaseHtmlElement
                 }
             }
 
-            // Append the $pane only if the current pane is null
-            if (! $currentPane) {
-                $this->panes[$pane->getName()] = $pane;
+            if ($currentPane) {
+                // We need to set these attributes here again because they might have changed above
+                $currentPane
+                    ->setTitle($pane->getTitle())
+                    ->setOwner($pane->getOwner())
+                    ->setPaneId($pane->getPaneId())
+                    ->setDisabled($pane->getDisabled())
+                    ->setUserWidget($pane->isUserWidget())
+                    ->setOverride($pane->isOverridesSystem());
+
+                continue;
             }
+
+            $this->panes[$pane->getName()] = $pane;
         }
 
         return $this;
@@ -562,8 +584,10 @@ class Dashboard extends BaseHtmlElement
      */
     public function getTabs($defaultPane = false)
     {
-        if (Url::fromRequest()->hasParam($this->tabParam[0])) {
-            $url = Url::fromPath('dashboard/home')->getUrlWithout($this->tabParam);
+        if (Url::fromRequest()->hasParam('home')) {
+            $home = Url::fromRequest()->getParam('home');
+            $url = Url::fromPath('dashboard/home')->getUrlWithout(['home', $this->tabParam]);
+            $url->addParams(['home'  => $home]);
         } else {
             $url = Url::fromPath('dashboard')->getUrlWithout($this->tabParam);
         }
@@ -577,10 +601,6 @@ class Dashboard extends BaseHtmlElement
                     continue;
                 }
 
-                if (Url::fromRequest()->hasParam($this->tabParam[0])) {
-                    $url->addParams([$this->tabParam[0]  => $this->getHomeById($pane->getParentId())->getName()]);
-                }
-
                 $this->tabs->add(
                     $key,
                     [
@@ -590,7 +610,7 @@ class Dashboard extends BaseHtmlElement
                         ),
                         'label'     => $pane->getTitle(),
                         'url'       => clone($url),
-                        'urlParams' => [$this->tabParam[1] => $key]
+                        'urlParams' => [$this->tabParam => $key]
                     ]
                 );
             }
@@ -656,7 +676,7 @@ class Dashboard extends BaseHtmlElement
         }
 
         throw new ProgrammingError(
-            'Dashboard home doesn\'t exist with the provided id: "%s"',
+            'Dashboard home with the given id does not exist: "%s"',
             $id
         );
     }
@@ -677,7 +697,7 @@ class Dashboard extends BaseHtmlElement
         }
 
         throw new ProgrammingError(
-            'Dashboard home doesn\'t exist with the provided name: "%s"',
+            'Dashboard home with the given name does not exist: "%s"',
             $name
         );
     }
