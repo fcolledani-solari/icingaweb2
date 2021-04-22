@@ -739,7 +739,7 @@ class Dashboard extends BaseHtmlElement
             $this->removePanes();
 
             if (self::DEFAULT_HOME !== $home) {
-                $this->getConn()->delete('dashboard_home', ['id = ?'    => $parent]);
+                $this->getConn()->delete('dashboard_home', ['id = ?' => $parent]);
             }
         } else {
             throw new ProgrammingError('Home does not exist: ' . $home);
@@ -870,7 +870,11 @@ class Dashboard extends BaseHtmlElement
             $pane = $this->getPane($pane);
         }
 
-        if ($pane->isUserWidget() && ! $pane->getDisabled()) {
+        if ($pane->getDisabled()) {
+            return $this;
+        }
+
+        if ($pane->getOwner() && ! $pane->getDisabled()) {
             $tableName = 'dashboard';
             $rowName = 'id = ?';
 

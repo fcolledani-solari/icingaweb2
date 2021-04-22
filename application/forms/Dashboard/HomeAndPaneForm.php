@@ -228,11 +228,25 @@ class HomeAndPaneForm extends CompatForm
                 }
 
                 if (! $paneUpdated) {
-                    $db->update('dashboard', [
-                        'home_id'   => $homeId,
-                        'name'      => $this->getValue('name'),
-                        'label'     => $this->getPopulatedValue('title'),
-                    ], ['id = ?' => $pane->getPaneId()]);
+                    if (! $pane->getOwner()) {
+                        $db->insert('dashboard_override', [
+                            'dashboard_id'  => $pane->getPaneId(),
+                            'home_id'       => $homeId,
+                            'owner'         => $this->dashboard->getUser()->getUsername(),
+                            'label'         => $this->getValue('title')
+                        ]);
+                    } elseif ($pane->isOverridesSystem()) {
+                        $db->update('dashboard_override', [
+                            'home_id'   => $homeId,
+                            'label'     => $this->getValue('title'),
+                        ], ['dashboard_id = ?' => $pane->getPaneId()]);
+                    } else {
+                        $db->update('dashboard', [
+                            'home_id'   => $homeId,
+                            'name'      => $this->getValue('name'),
+                            'label'     => $this->getPopulatedValue('title'),
+                        ], ['id = ?' => $pane->getPaneId()]);
+                    }
                 }
 
                 $message = sprintf(
