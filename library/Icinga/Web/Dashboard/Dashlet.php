@@ -28,6 +28,11 @@ class Dashlet extends BaseHtmlElement implements UserWidget
      */
     protected $userWidget = false;
 
+    /**
+     * Flag if this dashlet overrides a system dashlet
+     *
+     * @var bool
+     */
     private $override = false;
 
     /**
@@ -37,6 +42,11 @@ class Dashlet extends BaseHtmlElement implements UserWidget
      */
     private $url;
 
+    /**
+     * Not translatable name of this dashlet
+     *
+     * @var string
+     */
     private $name;
 
     /**
@@ -65,7 +75,11 @@ class Dashlet extends BaseHtmlElement implements UserWidget
      */
     private $progressLabel;
 
-    /** @var string Unique identifier of this dashlet */
+    /**
+     * Unique identifier of this dashlet
+     *
+     * @var integer
+     */
     private $dashletId;
 
     /**
@@ -107,6 +121,13 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         return $this->dashletId;
     }
 
+    /**
+     * Setter for this name
+     *
+     * @param $name
+     *
+     * @return $this
+     */
     public function setName($name)
     {
         $this->name = $name;
@@ -114,6 +135,11 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         return $this;
     }
 
+    /**
+     * Getter for this name
+     *
+     * @return string
+     */
     public function getName()
     {
         return $this->name;
@@ -233,6 +259,9 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         return $array;
     }
 
+    /**
+     * @inheritDoc
+     */
     protected function assemble()
     {
         if (! $this->url) {
@@ -286,6 +315,9 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         return $this->pane;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function setUserWidget($userWidget = true)
     {
         $this->userWidget = (bool) $userWidget;
@@ -293,11 +325,21 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         return $this;
     }
 
+    /**
+     * @inheritDoc
+     */
     public function isUserWidget()
     {
         return $this->userWidget;
     }
 
+    /**
+     * Setter for dashlet override
+     *
+     * @param bool $override
+     *
+     * @return $this
+     */
     public function setOverride($override = true)
     {
         $this->override = $override;
@@ -305,6 +347,11 @@ class Dashlet extends BaseHtmlElement implements UserWidget
         return $this;
     }
 
+    /**
+     * Getter for dashlet override
+     *
+     * @return bool
+     */
     public function isOverridesSystem()
     {
         return $this->override;

@@ -564,10 +564,12 @@ class Dashboard extends BaseHtmlElement
                         $currentPane->addDashlet($dashlet);
                     } else {
                         $currentPane->getDashlet($dashlet->getTitle())
-                            ->setName($dashlet->getName())
-                            ->setUserWidget()
                             ->setUrl($dashlet->getUrl())
-                            ->setDisabled($dashlet->getDisabled());
+                            ->setName($dashlet->getName())
+                            ->setDisabled($dashlet->getDisabled())
+                            ->setDashletId($dashlet->getDashletId())
+                            ->setUserWidget($dashlet->isUserWidget())
+                            ->setOverride($dashlet->isOverridesSystem());
                     }
                 }
             }
@@ -820,25 +822,6 @@ class Dashboard extends BaseHtmlElement
     }
 
     /**
-     * Check and get if any of the panes contains the given uid
-     *
-     * @param  $homeId
-     *
-     * @param  $pane
-     *
-     * @return mixed
-     */
-    public function hasHomeThisPane($homeId, $pane)
-    {
-        $select = (new Select())
-            ->columns('*')
-            ->from('dashboard')
-            ->where(['name = ?' => $pane, 'home_id = ?' => $homeId]);
-
-        return $this->getConn()->select($select)->fetch();
-    }
-
-    /**
      * Add a pane object to this dashboard
      *
      * @param Pane $pane        The pane to add
@@ -870,10 +853,6 @@ class Dashboard extends BaseHtmlElement
             $pane = $this->getPane($pane);
         }
 
-        if ($pane->getDisabled()) {
-            return $this;
-        }
-
         if ($pane->getOwner() && ! $pane->getDisabled()) {
             $tableName = 'dashboard';
             $rowName = 'id = ?';
@@ -887,7 +866,7 @@ class Dashboard extends BaseHtmlElement
                 $rowName    => $pane->getPaneId(),
                 'owner = ?' => $pane->getOwner()
             ]);
-        } else {
+        } elseif (! $pane->getDisabled()) {
             // User is going to disable this system pane
             $this->getConn()->insert('dashboard_override', [
                 'dashboard_id'  => $pane->getPaneId(),

@@ -250,7 +250,7 @@ class Pane implements UserWidget
     {
         if (! $dashlet instanceof Dashlet) {
             if (! $this->hasDashlet($dashlet)) {
-                throw new ProgrammingError('Dashlet does not exist: ' . $dashlet);
+                throw new ProgrammingError('Trying to remove invalid dashlet: ' . $dashlet);
             }
 
             $dashlet = $this->getDashlet($dashlet);
