@@ -466,6 +466,10 @@ class Dashboard extends BaseHtmlElement
                         'label'     => $pane->getTitle()
                     ]);
                 }
+
+                if ($currentPane) {
+                    $currentPane->setPaneId($pane->getPaneId());
+                }
             }
 
             // Check if the pane does have an owner, if not it's a system pane
@@ -514,7 +518,7 @@ class Dashboard extends BaseHtmlElement
                         // Remove the custom dashlet if label & url are null|rolled back to their original
                         // value and is not disabled
                         if ((! $customDashlet->label || $customDashlet->label === $dashlet->getTitle()) &&
-                            (! $customDashlet->url || $customDashlet->url === $dashlet->getUrl()) &&
+                            (! $customDashlet->url || $customDashlet->url === $dashlet->getUrl()->getRelativeUrl()) &&
                             ! (bool)$customDashlet->disabled) {
                             $this->getConn()->delete('dashlet_override', [
                                 'dashlet_id = ?' => $dashlet->getDashletId()
@@ -567,7 +571,6 @@ class Dashboard extends BaseHtmlElement
                             ->setUrl($dashlet->getUrl())
                             ->setName($dashlet->getName())
                             ->setDisabled($dashlet->getDisabled())
-                            ->setDashletId($dashlet->getDashletId())
                             ->setUserWidget($dashlet->isUserWidget())
                             ->setOverride($dashlet->isOverridesSystem());
                     }
@@ -579,7 +582,6 @@ class Dashboard extends BaseHtmlElement
                 $currentPane
                     ->setTitle($pane->getTitle())
                     ->setOwner($pane->getOwner())
-                    ->setPaneId($pane->getPaneId())
                     ->setDisabled($pane->getDisabled())
                     ->setUserWidget($pane->isUserWidget())
                     ->setOverride($pane->isOverridesSystem());
@@ -954,7 +956,7 @@ class Dashboard extends BaseHtmlElement
 
             if (empty($dashlets)) {
                 $this->setAttribute('class', 'content');
-                $dashlets = new HtmlElement('h1', null, 'No dashlet added to this pane.');
+                $dashlets = new HtmlElement('h1', null, t('No dashlet added to this pane.'));
             }
         } else {
             $this->setAttribute('class', 'content');
@@ -1014,7 +1016,7 @@ class Dashboard extends BaseHtmlElement
     {
         $active = $this->getTabs()->getActiveTab();
         if (! $active) {
-            if ($active = Url::fromRequest()->getParam($this->tabParam[1])) {
+            if ($active = Url::fromRequest()->getParam($this->tabParam)) {
                 if ($this->hasPane($active)) {
                     $this->activate($active);
                 } else {

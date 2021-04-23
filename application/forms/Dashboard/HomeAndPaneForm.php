@@ -220,10 +220,7 @@ class HomeAndPaneForm extends CompatForm
                     $paneUpdated = true;
 
                     $db->update('dashboard_override', ['disabled' => 0], [
-                        'dashboard_id = ?'    => $pane->getPaneId()
-                    ]);
-                    $db->update('dashlet_override', ['disabled' => 0], [
-                        'dashboard_id = ?'    => $pane->getPaneId()
+                        'dashboard_id = ?' => $pane->getPaneId()
                     ]);
                 }
 

@@ -25,7 +25,7 @@ class Pane implements UserWidget
     protected $userWidget = false;
 
     /**
-     * The name of this pane, as defined in the ini file
+     * The not translatable name of this pane
      *
      * @var string
      */
@@ -59,10 +59,15 @@ class Pane implements UserWidget
      */
     private $disabled = false;
 
+    /**
+     * Whether this pane overrides a system pane
+     *
+     * @var bool
+     */
     private $override = false;
 
     /**
-     * Dashboard home id if the current pane is loaded from DB
+     * Dashboard home id if the current pane
      *
      * @var integer
      */
@@ -295,8 +300,11 @@ class Pane implements UserWidget
             $dashlets = $this->getDashlets();
         }
 
-        foreach ($dashlets as $dashlet) {
-            $this->removeDashlet($dashlet);
+        // Remove dashlets only if this is a custom pane
+        if ($this->getOwner()) {
+            foreach ($dashlets as $dashlet) {
+                $this->removeDashlet($dashlet);
+            }
         }
 
         return $this;

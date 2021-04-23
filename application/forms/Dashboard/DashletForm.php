@@ -295,6 +295,7 @@ class DashletForm extends CompatForm
                 $tmpPane = $this->dashboard->getPane($paneName);
                 if ($tmpPane->getParentId() === $homeId) {
                     $paneLabel = $tmpPane->getTitle();
+                    $paneId = $tmpPane->getPaneId();
                 }
             }
 
@@ -424,7 +425,7 @@ class DashletForm extends CompatForm
                     'label'     => $dashletLabel,
                     'url'       => $dashletUrl,
                     'disabled'  => (int)$dashletDisabled
-                ], ['dashlet_id = ?'    => $orgDashlet->getDashletId()]);
+                ], ['dashlet_id = ?' => $orgDashlet->getDashletId()]);
             }
 
             if ($dashletUpdated) {

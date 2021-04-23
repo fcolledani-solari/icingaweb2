@@ -14,19 +14,20 @@ CREATE TABLE `dashboard_home` (
 CREATE TABLE `dashboard` (
     `id` binary(20) NOT NULL PRIMARY KEY COMMENT 'sha1(module.name|home.name + name)',
     `home_id` int(10) UNSIGNED NOT NULL,
-    `name` varchar(64) NOT NULL COLLATE utf8mb4_unicode_ci,
     `owner` varchar(254) NOT NULL COLLATE utf8mb4_unicode_ci,
+    `name` varchar(64) NOT NULL COLLATE utf8mb4_unicode_ci,
     `label` varchar(64) NOT NULL COLLATE utf8mb4_unicode_ci,
     KEY `fk_dashboard_dashboard_home` (`home_id`),
     CONSTRAINT `fk_dashboard_dashboard_home` FOREIGN KEY (`home_id`) REFERENCES  `dashboard_home` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `dashboard_override` (
-  `dashboard_id` binary(20) NOT NULL PRIMARY KEY,
-  `home_id` int(10) UNSIGNED NOT NULL,
+  `dashboard_id` binary(20) NOT NULL,
   `owner` varchar(254) NOT NULL COLLATE utf8mb4_unicode_ci,
+  `home_id` int(10) UNSIGNED NOT NULL,
   `label` varchar(64) DEFAULT NULL COLLATE utf8mb4_unicode_ci,
-  `disabled` tinyint(1) DEFAULT 0
+  `disabled` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`dashboard_id`, `owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `dashlet` (
@@ -41,12 +42,13 @@ CREATE TABLE `dashlet` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `dashlet_override` (
-    `dashlet_id` binary(20) NOT NULL PRIMARY KEY,
+    `dashlet_id` binary(20) NOT NULL,
     `dashboard_id` binary(20) NOT NULL,
     `owner` varchar(254) NOT NULL COLLATE utf8mb4_unicode_ci,
     `url` varchar(2048) DEFAULT NULL COLLATE utf8mb4_bin,
     `label` varchar(64) DEFAULT NULL COLLATE utf8mb4_unicode_ci,
-    `disabled` tinyint(1) DEFAULT 0
+    `disabled` tinyint(1) DEFAULT 0,
+    PRIMARY KEY (`dashlet_id`, `dashboard_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE USER 'dashboard'@'%' IDENTIFIED BY 'dashboard';
