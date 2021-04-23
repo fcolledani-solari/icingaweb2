@@ -3,12 +3,9 @@
 
 namespace Icinga\Web\Widget;
 
-use Icinga\Application\Config;
 use Icinga\Common\Database;
 use Icinga\Exception\ConfigurationError;
-use Icinga\Exception\NotReadableError;
 use Icinga\Exception\ProgrammingError;
-use Icinga\Legacy\DashboardConfig;
 use Icinga\User;
 use Icinga\Web\Menu;
 use Icinga\Web\Navigation\Navigation;
@@ -39,16 +36,32 @@ class Dashboard extends BaseHtmlElement
 
     protected $defaultAttributes = ['class' => 'dashboard content'];
 
-    /** @var string Name of the default home */
+    /**
+     * Name of the default home
+     *
+     * @var string
+     */
     const DEFAULT_HOME = 'Default Home';
 
-    /** @var string Default user of the "Default Home" */
+    /**
+     * Default user of the "Default Home"
+     *
+     * @var string
+     */
     const DEFAULT_HOME_USER = 'icingaweb2';
 
-    /** @var string Preserve key name for coming features */
+    /**
+     * Preserve key name for coming features
+     *
+     * @var string
+     */
     const AVAILABLE_DASHLETS = 'Available Dashlets';
 
-    /** @var string Preserve key name for coming features */
+    /**
+     * Preserve key name for coming features
+     *
+     * @var string
+     */
     const SHARED_DASHBOARDS = 'Shared Dashboards';
 
     /**
@@ -124,40 +137,6 @@ class Dashboard extends BaseHtmlElement
         $this->loadUserDashboards();
 
         return $this;
-    }
-
-    /**
-     * Create and return a Config object for this dashboard
-     *
-     * @return  Config
-     */
-    public function getConfig()
-    {
-        $output = array();
-        foreach ($this->panes as $pane) {
-            if ($pane->isUserWidget()) {
-                $output[$pane->getName()] = $pane->toArray();
-            }
-            foreach ($pane->getDashlets() as $dashlet) {
-                if ($dashlet->isUserWidget()) {
-                    $output[$pane->getName() . '.' . $dashlet->getName()] = $dashlet->toArray();
-                }
-            }
-        }
-
-        return DashboardConfig::fromArray($output)->setConfigFile($this->getConfigFile())->setUser($this->user);
-    }
-
-    /**
-     * Load user dashboards from all config files that match the username
-     */
-    protected function loadUserDashboards()
-    {
-        foreach (DashboardConfig::listConfigFilesForUser($this->user) as $file) {
-            $this->loadUserDashboardsFromFile($file);
-        }
-
-        $this->loadUserDashboardsFromDatabase();
     }
 
     /**
@@ -239,13 +218,13 @@ class Dashboard extends BaseHtmlElement
 
     /**
      * Load user specific dashboards and dashlets from the database
-     * and merges them to the dashboards loaded from an ini file
+     * and merges them to the system dashboards
      *
      * @param   integer  $parentId
      *
      * @return  bool
      */
-    public function loadUserDashboardsFromDatabase($parentId = 0)
+    public function loadUserDashboards($parentId = 0)
     {
         if (Url::fromRequest()->getParam('home')) {
             if ($parentId === 0) {
@@ -307,101 +286,6 @@ class Dashboard extends BaseHtmlElement
     }
 
     /**
-     * Load user dashboards from the given config file
-     *
-     * @param   string  $file
-     *
-     * @return  bool
-     */
-    protected function loadUserDashboardsFromFile($file)
-    {
-        try {
-            $config = Config::fromIni($file);
-        } catch (NotReadableError $e) {
-            return false;
-        }
-
-        if (! count($config)) {
-            return false;
-        }
-
-        if (Url::fromRequest()->hasParam('home')) {
-            $home = Url::fromRequest()->getParam('home');
-            // If the home param being loaded does not match the default home do nothing
-            if ($home !== self::DEFAULT_HOME) {
-                return false;
-            }
-        }
-
-        $this->loadHomeItems();
-        $db = $this->getConn();
-
-        if (! array_key_exists(self::DEFAULT_HOME, $this->homes)) {
-            $db->insert('dashboard_home', [
-                'name'  => self::DEFAULT_HOME,
-                'owner' => self::DEFAULT_HOME_USER
-            ]);
-
-            $homeId = $db->lastInsertId();
-        } else {
-            $homeId = $this->getHomeByName(self::DEFAULT_HOME)->getAttribute('homeId');
-        }
-
-        $this->setActiveHome($homeId);
-
-        $panes = [];
-        foreach ($config as $key => $part) {
-            if (strpos($key, '.') === false) {
-                $paneId = $this->getSHA1($this->user->getUsername() . self::DEFAULT_HOME . $key);
-                if ($this->hasPane($key)) {
-                    $panes[$key] = $this->getPane($key);
-                } else {
-                    $panes[$key] = new Pane($key);
-                    $panes[$key]->setTitle($part->get('title', $key));
-                }
-
-                $panes[$key]
-                    ->setUserWidget()
-                    ->setPaneId($paneId)
-                    ->setParentId($homeId)
-                    ->setOwner($this->user->getUsername())
-                    ->setDisabled($part->get('disabled', false));
-            } else {
-                list($paneName, $dashletName) = explode('.', $key, 2);
-                $dashletId = $this->getSHA1(
-                    $this->user->getUsername() . self::DEFAULT_HOME . $panes[$paneName]->getName() . $dashletName
-                );
-
-                if (! $this->hasPane($paneName) && ! array_key_exists($paneName, $panes)) {
-                    continue;
-                }
-
-                if ($this->hasPane($paneName)) {
-                    $panes[$paneName] = $this->getPane($paneName);
-                }
-
-                $dashlet = new Dashlet(
-                    $part->get('title', $dashletName),
-                    $part->get('url'),
-                    $panes[$paneName]
-                );
-
-                $dashlet
-                    ->setUserWidget()
-                    ->setName($dashletName)
-                    ->setDashletId($dashletId)
-                    ->setDisabled($part->get('disabled', false));
-
-                $panes[$paneName]->addDashlet($dashlet);
-            }
-        }
-
-        $this->mergePanes($panes);
-
-        return true;
-    }
-
-    /**
      * Merge panes with existing panes
      *
      * @param  array $panes
@@ -445,29 +329,8 @@ class Dashboard extends BaseHtmlElement
                         continue;
                     }
                 }
-            }
 
-            // This is only for panes which are loaded from user specific dashboard.ini files
-            if ($pane->getOwner() && ! $pane->isOverridesSystem()) {
-                $findPane = $this->getConn()->select((new Select())
-                    ->columns('name')
-                    ->from('dashboard')
-                    ->where([
-                        'id = ?'    => $pane->getPaneId(),
-                        'owner = ?' => $pane->getOwner()
-                    ]))->fetch();
-
-                if (! $findPane) {
-                    $this->getConn()->insert('dashboard', [
-                        'id'        => $pane->getPaneId(),
-                        'home_id'   => $pane->getParentId(),
-                        'owner'     => $pane->getOwner(),
-                        'name'      => $pane->getName(),
-                        'label'     => $pane->getTitle()
-                    ]);
-                }
-
-                if ($currentPane) {
+                if (! $currentPane->getOwner() && $pane->getOwner()) {
                     $currentPane->setPaneId($pane->getPaneId());
                 }
             }
@@ -537,29 +400,6 @@ class Dashboard extends BaseHtmlElement
                                 $dashlet->setTitle($customDashlet->label);
                             }
                         }
-                    }
-                }
-
-                // This is only for dashlets which are loaded from user specific dashboard.ini files
-                if ($dashlet->isUserWidget() && ! $dashlet->isOverridesSystem()) {
-                    $findDashlet = $this->getConn()->select((new Select())
-                        ->columns('name')
-                        ->from('dashlet')
-                        ->where([
-                            'id = ?'            => $dashlet->getDashletId(),
-                            'owner = ?'         => $pane->getOwner(),
-                            'dashboard_id = ?'  => $pane->getPaneId()
-                        ]))->fetch();
-
-                    if (! $findDashlet) {
-                        $this->getConn()->insert('dashlet', [
-                            'id'            => $dashlet->getDashletId(),
-                            'dashboard_id'  => $pane->getPaneId(),
-                            'owner'         => $pane->getOwner(),
-                            'name'          => $dashlet->getName(),
-                            'label'         => $dashlet->getTitle(),
-                            'url'           => $dashlet->getUrl()->getRelativeUrl()
-                        ]);
                     }
                 }
 
@@ -1056,19 +896,6 @@ class Dashboard extends BaseHtmlElement
     public function getUser()
     {
         return $this->user;
-    }
-
-    /**
-     * Get config file
-     *
-     * @return string
-     */
-    public function getConfigFile()
-    {
-        if ($this->user === null) {
-            throw new ProgrammingError('Can\'t load dashboards. User is not set');
-        }
-        return Config::resolvePath('dashboards/' . strtolower($this->user->getUsername()) . '/dashboard.ini');
     }
 
     /**

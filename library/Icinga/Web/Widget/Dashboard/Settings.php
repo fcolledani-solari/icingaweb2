@@ -56,7 +56,7 @@ class Settings extends BaseHtmlElement
         } else {
             $home = reset($homes);
             if (! empty($home)) {
-                $this->dashboard->loadUserDashboardsFromDatabase($home->getAttribute('homeId'));
+                $this->dashboard->loadUserDashboards($home->getAttribute('homeId'));
             }
         }
 

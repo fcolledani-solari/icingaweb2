@@ -67,7 +67,7 @@ class DashletForm extends CompatForm
                     if (! empty($firstHome)) {
                         $firstHomeId = $firstHome->getAttribute('homeId');
                         // Load dashboards from the DB by the given home Id
-                        $this->dashboard->loadUserDashboardsFromDatabase($firstHomeId);
+                        $this->dashboard->loadUserDashboards($firstHomeId);
                         $panes = $this->dashboard->getPaneKeyTitleArray($firstHomeId);
                     }
                 }
@@ -75,7 +75,7 @@ class DashletForm extends CompatForm
                 if (array_key_exists($populated, $this->dashboard->getHomes())) {
                     $homeId = $this->dashboard->getHomeByName($populated)->getAttribute('homeId');
                     // We have to load dashboards each time the home Id changed
-                    $this->dashboard->loadUserDashboardsFromDatabase($homeId);
+                    $this->dashboard->loadUserDashboards($homeId);
                     $panes = $this->dashboard->getPaneKeyTitleArray($homeId);
                 }
             }
@@ -374,7 +374,7 @@ class DashletForm extends CompatForm
             $homeId = $db->lastInsertId();
         }
 
-        $this->dashboard->loadUserDashboardsFromDatabase($homeId);
+        $this->dashboard->loadUserDashboards($homeId);
         if ($this->dashboard->hasPane($this->getValue('pane'))) {
             $newPane = $this->dashboard->getPane($this->getValue('pane'));
             $paneId = $newPane->getPaneId();
