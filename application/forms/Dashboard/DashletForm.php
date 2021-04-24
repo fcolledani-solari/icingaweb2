@@ -295,7 +295,6 @@ class DashletForm extends CompatForm
                 $tmpPane = $this->dashboard->getPane($paneName);
                 if ($tmpPane->getParentId() === $homeId) {
                     $paneLabel = $tmpPane->getTitle();
-                    $paneId = $tmpPane->getPaneId();
                 }
             }
 
@@ -393,13 +392,11 @@ class DashletForm extends CompatForm
 
         // Whether the original home id matches the default home id
         if ($orgHomeId === $defaultHome->getAttribute('homeId')) {
-            $dashletUrl = null;
-            $dashletLabel = null;
+            $dashletUrl = $orgDashlet->getUrl()->getRelativeUrl();
+            $dashletLabel = $this->getValue('dashlet');
             $dashletDisabled = $orgDashlet->getDisabled();
 
-            if ($orgDashlet->getTitle() !== $this->getValue('dashlet')) {
-                $dashletLabel = $this->getValue('dashlet');
-            } elseif ($orgDashlet->getUrl() !== $this->getValue('url')) {
+            if (! $orgDashlet->getUrl()->matches($this->getValue('url'))) {
                 $dashletUrl = $this->getValue('url');
             }
 
@@ -410,10 +407,18 @@ class DashletForm extends CompatForm
             $dashletUpdated = false;
             if (! $orgDashlet->isUserWidget()) {
                 $dashletUpdated = true;
+
+                $username = $this->dashboard->getUser()->getUsername();
+                // Since system dashlets can be edited by multiple users, we need to change
+                // the original id here so we don't encounter a duplicate key error
+                $dashletId = $this->dashboard->getSHA1(
+                    $username . Dashboard::DEFAULT_HOME . $orgDashlet->getPane()->getName() . $orgDashlet->getName()
+                );
+
                 $db->insert('dashlet_override', [
-                    'dashlet_id'    => $orgDashlet->getDashletId(),
+                    'dashlet_id'    => $dashletId,
                     'dashboard_id'  => $orgDashlet->getPane()->getPaneId(),
-                    'owner'         => $this->dashboard->getUser()->getUsername(),
+                    'owner'         => $username,
                     'label'         => $dashletLabel,
                     'url'           => $dashletUrl,
                     'disabled'      => (int)$dashletDisabled
@@ -425,7 +430,10 @@ class DashletForm extends CompatForm
                     'label'     => $dashletLabel,
                     'url'       => $dashletUrl,
                     'disabled'  => (int)$dashletDisabled
-                ], ['dashlet_id = ?' => $orgDashlet->getDashletId()]);
+                ], [
+                    'dashlet_id = ?'    => $orgDashlet->getDashletId(),
+                    'owner = ?'         => $this->dashboard->getUser()->getUsername()
+                ]);
             }
 
             if ($dashletUpdated) {

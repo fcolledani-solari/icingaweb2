@@ -9,6 +9,7 @@ use Icinga\Data\ConfigObject;
 use Icinga\Exception\ProgrammingError;
 use Icinga\Exception\ConfigurationError;
 use Icinga\Web\Dashboard\Dashlet;
+use Icinga\Web\Widget\Dashboard;
 
 /**
  * A pane, displaying different Dashboard dashlets
@@ -261,9 +262,17 @@ class Pane implements UserWidget
             $dashlet = $this->getDashlet($dashlet);
         }
 
+        $owner = $dashlet->getPane()->getOwner();
+        if (empty($owner)) {
+            $owner = Auth::getInstance()->getUser()->getUsername();
+        }
+
         if ($dashlet->isUserWidget() === true && ! $dashlet->getDisabled()) {
             if ($dashlet->isOverridesSystem()) {
-                $this->getDb()->delete('dashlet_override', ['dashlet_id = ?' => $dashlet->getDashletId()]);
+                $this->getDb()->delete('dashlet_override', [
+                    'dashlet_id = ?'    => $dashlet->getDashletId(),
+                    'owner = ?'         => $owner
+                ]);
             } else {
                 $this->getDb()->delete('dashlet', [
                     'id = ?'            => $dashlet->getDashletId(),
@@ -271,13 +280,14 @@ class Pane implements UserWidget
                 ]);
             }
         } elseif (! $dashlet->getDisabled()) {
-            $owner = $dashlet->getPane()->getOwner();
-            if (empty($owner)) {
-                $owner = Auth::getInstance()->getUser()->getUsername();
-            }
+            // Since system dashlets can be edited by multiple users, we need to change
+            // the original id here so we don't encounter a duplicate key error
+            $dashletId = sha1(
+                $owner . Dashboard::DEFAULT_HOME . $dashlet->getPane()->getName() . $dashlet->getName(), true
+            );
 
             $this->getDb()->insert('dashlet_override', [
-                'dashlet_id'    => $dashlet->getDashletId(),
+                'dashlet_id'    => $dashletId,
                 'dashboard_id'  => $dashlet->getPane()->getPaneId(),
                 'owner'         => $owner,
                 'disabled'      => true

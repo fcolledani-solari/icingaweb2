@@ -220,7 +220,8 @@ class HomeAndPaneForm extends CompatForm
                     $paneUpdated = true;
 
                     $db->update('dashboard_override', ['disabled' => 0], [
-                        'dashboard_id = ?' => $pane->getPaneId()
+                        'dashboard_id = ?'  => $pane->getPaneId(),
+                        'owner = ?'         => $pane->getOwner()
                     ]);
                 }
 
@@ -236,7 +237,10 @@ class HomeAndPaneForm extends CompatForm
                         $db->update('dashboard_override', [
                             'home_id'   => $homeId,
                             'label'     => $this->getValue('title'),
-                        ], ['dashboard_id = ?' => $pane->getPaneId()]);
+                        ], [
+                            'dashboard_id = ?' => $pane->getPaneId(),
+                            'owner = ?'         => $pane->getOwner()
+                        ]);
                     } else {
                         $db->update('dashboard', [
                             'home_id'   => $homeId,

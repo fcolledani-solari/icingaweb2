@@ -350,7 +350,10 @@ class Dashboard extends BaseHtmlElement
                     // Remove the custom pane if label is null|rolled back to it's original value and is not disabled
                     if ((! $customPane->label || $customPane->label == $pane->getTitle()) &&
                         ! (bool)$customPane->disabled) {
-                        $this->getConn()->delete('dashboard_override', ['dashboard_id = ?' => $pane->getPaneId()]);
+                        $this->getConn()->delete('dashboard_override', [
+                            'dashboard_id = ?'  => $pane->getPaneId(),
+                            'owner = ?'         => $this->user->getUsername()
+                        ]);
                     } else {
                         $pane
                             ->setUserWidget()
@@ -368,28 +371,34 @@ class Dashboard extends BaseHtmlElement
             /** @var Dashlet $dashlet */
             foreach ($pane->getDashlets() as $dashlet) {
                 if (! $dashlet->isUserWidget()) {
+                    // Since the system dashlet ids are being modified when writing them into
+                    // the DB, we have to regenerate the ids here as well.
+                    $dashletId = $this->getSHA1(
+                        $this->user->getUsername() . self::DEFAULT_HOME . $pane->getName() . $dashlet->getName()
+                    );
                     $customDashlet = $this->getConn()->select((new Select())
                         ->columns('*')
                         ->from('dashlet_override')
                         ->where([
                             'owner = ?'         => $this->user->getUsername(),
-                            'dashlet_id = ?'    => $dashlet->getDashletId(),
-                            'dashboard_id = ?'  => $pane->getPaneId()
+                            'dashlet_id = ?'    => $dashletId,
                         ]))->fetch();
 
                     if ($customDashlet) {
                         // Remove the custom dashlet if label & url are null|rolled back to their original
                         // value and is not disabled
                         if ((! $customDashlet->label || $customDashlet->label === $dashlet->getTitle()) &&
-                            (! $customDashlet->url || $customDashlet->url === $dashlet->getUrl()->getRelativeUrl()) &&
+                            (! $customDashlet->url || $dashlet->getUrl()->matches($customDashlet->url)) &&
                             ! (bool)$customDashlet->disabled) {
                             $this->getConn()->delete('dashlet_override', [
-                                'dashlet_id = ?' => $dashlet->getDashletId()
+                                'dashlet_id = ?'    => $dashletId,
+                                'owner = ?'         => $this->user->getUsername()
                             ]);
                         } else {
                             $dashlet
                                 ->setUserWidget()
                                 ->setOverride()
+                                ->setDashletId($dashletId)
                                 ->setDisabled($customDashlet->disabled);
 
                             if ($customDashlet->url) {
@@ -411,6 +420,7 @@ class Dashboard extends BaseHtmlElement
                             ->setUrl($dashlet->getUrl())
                             ->setName($dashlet->getName())
                             ->setDisabled($dashlet->getDisabled())
+                            ->setDashletId($dashlet->getDashletId())
                             ->setUserWidget($dashlet->isUserWidget())
                             ->setOverride($dashlet->isOverridesSystem());
                     }
@@ -422,7 +432,6 @@ class Dashboard extends BaseHtmlElement
                 $currentPane
                     ->setTitle($pane->getTitle())
                     ->setOwner($pane->getOwner())
-                    ->setDisabled($pane->getDisabled())
                     ->setUserWidget($pane->isUserWidget())
                     ->setOverride($pane->isOverridesSystem());
 

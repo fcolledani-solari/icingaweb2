@@ -78,7 +78,7 @@ class Dashlet extends BaseHtmlElement implements UserWidget
     /**
      * Unique identifier of this dashlet
      *
-     * @var integer
+     * @var string
      */
     private $dashletId;
 

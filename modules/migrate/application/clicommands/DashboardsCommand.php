@@ -2,6 +2,7 @@
 
 namespace Icinga\Module\Migrate\Clicommands;
 
+use Cassandra\Varint;
 use Icinga\Application\Config;
 use Icinga\Cli\Command;
 use Icinga\Common\Database;
@@ -37,17 +38,14 @@ class DashboardsCommand extends Command
      */
     public function indexAction()
     {
-        $config = Config::resolvePath('dashboards/');
-        $directories = new DirectoryIterator($config);
+        $config = Config::resolvePath('dashboards');
+        if (DirectoryIterator::isReadable($config)) {
+            $directories = new DirectoryIterator($config);
 
-        foreach ($directories as $directory) {
-            $username = explode('//', $directory);
-            array_shift($username);
-
-            $username = implode('', $username);
-
-            $file = str_replace('//', '/', $directory) . '/dashboard.ini';
-            $this->loadUserDashboardsFromFile($username, $file);
+            foreach ($directories as $directory) {
+                $directory .= '/dashboard.ini';
+                $this->loadUserDashboardsFromFile($directories->key(), $directory);
+            }
         }
     }
 
