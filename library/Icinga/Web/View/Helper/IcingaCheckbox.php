@@ -12,6 +12,7 @@ class IcingaCheckbox extends \Zend_View_Helper_FormCheckbox
         }
 
         $attribs['class'] = (isset($attribs['class']) ? $attribs['class'] . ' ' : '') . 'sr-only';
+        $attribs['hidden'] = true;
         $html = parent::formCheckbox($name, $value, $attribs, $checkedOptions);
 
         $class = 'toggle-switch';
