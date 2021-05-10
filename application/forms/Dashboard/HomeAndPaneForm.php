@@ -226,20 +226,20 @@ class HomeAndPaneForm extends CompatForm
                 }
 
                 if (! $paneUpdated) {
-                    if (! $pane->getOwner()) {
-                        $db->insert('dashboard_override', [
-                            'dashboard_id'  => $pane->getPaneId(),
-                            'home_id'       => $homeId,
-                            'owner'         => $this->dashboard->getUser()->getUsername(),
-                            'label'         => $this->getValue('title')
-                        ]);
-                    } elseif ($pane->isOverridesSystem()) {
+                    if ($pane->isOverridesSystem()) {
                         $db->update('dashboard_override', [
                             'home_id'   => $homeId,
                             'label'     => $this->getValue('title'),
                         ], [
                             'dashboard_id = ?' => $pane->getPaneId(),
                             'owner = ?'         => $pane->getOwner()
+                        ]);
+                    } elseif (! $pane->getOwner() || $pane->getType() === 'system') {
+                        $db->insert('dashboard_override', [
+                            'dashboard_id'  => $pane->getPaneId(),
+                            'home_id'       => $homeId,
+                            'owner'         => $this->dashboard->getUser()->getUsername(),
+                            'label'         => $this->getValue('title')
                         ]);
                     } else {
                         $db->update('dashboard', [

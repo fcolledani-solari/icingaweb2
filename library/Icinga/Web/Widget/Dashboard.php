@@ -249,11 +249,12 @@ class Dashboard extends BaseHtmlElement
         $dashboards = [];
         foreach ($select as $dashboard) {
             $dashboards[$dashboard->name] = (new Pane($dashboard->name))
+                ->setUserWidget()
                 ->setPaneId($dashboard->id)
-                ->setParentId($dashboard->home_id)
                 ->setTitle($dashboard->label)
                 ->setOwner($dashboard->owner)
-                ->setUserWidget();
+                ->setType($dashboard->source)
+                ->setParentId($dashboard->home_id);
 
             $newResults = $this->getDb()->select((new Select())
                 ->columns('*')
@@ -336,7 +337,7 @@ class Dashboard extends BaseHtmlElement
             }
 
             // Check if the pane does have an owner, if not it's a system pane
-            if (! $pane->getOwner()) {
+            if (! $pane->getOwner() || $pane->getType() === 'system') {
                 $customPane = $this->getConn()->select((new Select())
                     ->columns('*')
                     ->from('dashboard_override')
@@ -610,8 +611,9 @@ class Dashboard extends BaseHtmlElement
     {
         $list = [];
         foreach ($this->homes as $name => $home) {
-            $list[$name] = $home->getName();
+            $list[$name] = $home->getLabel();
         }
+
         return $list;
     }
 
@@ -682,6 +684,7 @@ class Dashboard extends BaseHtmlElement
     public function addPane(Pane $pane)
     {
         $this->panes[$pane->getName()] = $pane;
+
         return $this;
     }
 
@@ -786,6 +789,7 @@ class Dashboard extends BaseHtmlElement
 
             $list[$name] = $pane->getTitle();
         }
+
         return $list;
     }
 

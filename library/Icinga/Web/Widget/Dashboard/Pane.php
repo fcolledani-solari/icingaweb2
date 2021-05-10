@@ -82,6 +82,13 @@ class Pane implements UserWidget
     private $paneId;
 
     /**
+     * A flag whether the user has create a dashlet in a system pane
+     *
+     * @var string
+     */
+    private $type = 'system';
+
+    /**
      * Create a new pane
      *
      * @param string $name         The pane to create
@@ -134,6 +141,30 @@ class Pane implements UserWidget
     public function getPaneId()
     {
         return $this->paneId;
+    }
+
+    /**
+     * Set type of this pane (system | private)
+     *
+     * @param $type
+     *
+     * @return $this
+     */
+    public function setType($type)
+    {
+        $this->type = $type;
+
+        return $this;
+    }
+
+    /**
+     * Get type of this pane
+     *
+     * @return string
+     */
+    public function getType()
+    {
+        return $this->type;
     }
 
     /**

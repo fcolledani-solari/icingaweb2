@@ -287,6 +287,8 @@ class DashletForm extends CompatForm
             }
         } catch (ProgrammingError $e) {
             $pane = null;
+            $type = 'private';
+
             $paneName = $this->getValue('pane');
             $paneLabel = $paneName;
             $paneId = $this->dashboard->getSHA1($this->dashboard->getUser()->getUsername() . $home . $paneName);
@@ -296,6 +298,10 @@ class DashletForm extends CompatForm
                 if ($tmpPane->getParentId() === $homeId) {
                     $paneLabel = $tmpPane->getTitle();
                 }
+
+                if (! $tmpPane->getOwner()) {
+                    $type = 'system';
+                }
             }
 
             $db->insert('dashboard', [
@@ -304,6 +310,7 @@ class DashletForm extends CompatForm
                 'owner'     => $this->dashboard->getUser()->getUsername(),
                 'name'      => $paneName,
                 'label'     => $paneLabel,
+                'source'    => $type
             ]);
         }
 
@@ -381,12 +388,19 @@ class DashletForm extends CompatForm
             $paneId = $this->dashboard->getSHA1(
                 $this->dashboard->getUser()->getUsername() . $homeName . $this->getValue('pane')
             );
+
+            $type = 'private';
+            if (! $orgPane->getOwner()) {
+                $type = 'system';
+            }
+
             $db->insert('dashboard', [
                 'id'        => $paneId,
                 'home_id'   => $homeId,
                 'name'      => $this->getValue('pane'),
                 'owner'     => $this->dashboard->getUser()->getUsername(),
                 'label'     => $this->getValue('pane'),
+                'source'    => $type
             ]);
         }
 
