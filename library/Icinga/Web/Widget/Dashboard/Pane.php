@@ -314,7 +314,8 @@ class Pane implements UserWidget
             // Since system dashlets can be edited by multiple users, we need to change
             // the original id here so we don't encounter a duplicate key error
             $dashletId = sha1(
-                $owner . Dashboard::DEFAULT_HOME . $dashlet->getPane()->getName() . $dashlet->getName(), true
+                $owner . Dashboard::DEFAULT_HOME . $dashlet->getPane()->getName() . $dashlet->getName(),
+                true
             );
 
             $this->getDb()->insert('dashlet_override', [
